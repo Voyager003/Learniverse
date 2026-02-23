@@ -1,98 +1,130 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Learniverse
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+온라인 교육 플랫폼 백엔드 API 서버
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## 프로젝트 목적
 
-## Description
+온라인 교육 플랫폼의 핵심 백엔드를 구축합니다.
+강의 등록부터 수강 신청, 과제 제출, 피드백까지 교육의 전체 사이클을 다루며,
+수강생이 몰리는 상황에서도 안정적으로 동작하는 서버를 목표로 합니다.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## 기술 스택
 
-## Project setup
+| 항목 | 기술 |
+|---|---|
+| Framework | NestJS 11 + TypeScript 5.7 |
+| PostgreSQL | TypeORM (관계형 데이터) |
+| MongoDB | Mongoose (유연한 문서 구조) |
+| 인증 | Passport + JWT (Access 15m / Refresh 7d) |
+| 입력 검증 | class-validator + class-transformer |
+| 설정 관리 | @nestjs/config + Joi |
+| API 문서 | Swagger |
+| 테스트 | Jest + Supertest |
+
+## 구현 기능
+
+### 인증
+- [x] 회원가입 / 로그인
+- [x] JWT Access + Refresh Token
+- [x] 역할 기반 접근 제어 (Student, Tutor, Admin)
+
+### 사용자
+- [x] 프로필 조회 / 수정
+- [x] 사용자 목록 (Admin)
+
+### 강의
+- [x] 강의 CRUD (Tutor)
+- [x] 레슨 CRUD (강의 하위 리소스)
+- [x] 강의 목록 조회 + 페이지네이션 (Public)
+
+### 수강 신청
+- [x] 수강 신청 (중복 방지)
+- [x] 내 수강 목록 조회
+- [x] 진도 업데이트
+
+### 과제
+- [x] 과제 출제 (Tutor)
+- [x] 과제 제출 (Student, MongoDB)
+- [x] 피드백 작성 (Tutor)
+
+### 인프라
+- [x] PostgreSQL Connection Pooling
+- [x] 글로벌 예외 필터 (일관된 에러 응답)
+- [x] 응답 래핑 인터셉터
+- [x] 환경변수 검증 (Joi)
+- [x] Swagger API 문서 자동화
+
+## API 엔드포인트
+
+모든 라우트 prefix: `/api/v1`
+
+### Auth
+| Method | Endpoint | 설명 | 권한 |
+|---|---|---|---|
+| POST | /auth/register | 회원가입 | Public |
+| POST | /auth/login | 로그인 | Public |
+| POST | /auth/refresh | 토큰 갱신 | Public |
+| POST | /auth/logout | 로그아웃 | Authenticated |
+
+### Users
+| Method | Endpoint | 설명 | 권한 |
+|---|---|---|---|
+| GET | /users/me | 내 프로필 | Authenticated |
+| PATCH | /users/me | 프로필 수정 | Authenticated |
+| GET | /users | 사용자 목록 | Admin |
+
+### Courses
+| Method | Endpoint | 설명 | 권한 |
+|---|---|---|---|
+| POST | /courses | 강의 생성 | Tutor, Admin |
+| GET | /courses | 강의 목록 | Public |
+| GET | /courses/:id | 강의 상세 | Public |
+| PATCH | /courses/:id | 강의 수정 | Owner Tutor |
+| DELETE | /courses/:id | 강의 삭제 | Owner Tutor |
+| POST | /courses/:id/lectures | 레슨 추가 | Owner Tutor |
+| PATCH | /courses/:id/lectures/:lid | 레슨 수정 | Owner Tutor |
+| DELETE | /courses/:id/lectures/:lid | 레슨 삭제 | Owner Tutor |
+
+### Enrollments
+| Method | Endpoint | 설명 | 권한 |
+|---|---|---|---|
+| POST | /enrollments | 수강 신청 | Student |
+| GET | /enrollments/my | 내 수강 목록 | Student |
+| PATCH | /enrollments/:id/progress | 진도 업데이트 | Student (본인) |
+
+### Assignments & Submissions
+| Method | Endpoint | 설명 | 권한 |
+|---|---|---|---|
+| POST | /courses/:cid/assignments | 과제 출제 | Owner Tutor |
+| GET | /courses/:cid/assignments | 과제 목록 | Enrolled Student, Tutor |
+| POST | /assignments/:aid/submissions | 과제 제출 | Enrolled Student |
+| GET | /assignments/:aid/submissions | 제출물 목록 | Tutor(전체), Student(본인) |
+| POST | /assignments/:aid/submissions/:sid/feedback | 피드백 작성 | Owner Tutor |
+
+## DB 설계
+
+### PostgreSQL
+- **users** — 사용자 (email, role, refresh_token)
+- **courses** — 강의 (title, category, difficulty, tutor FK)
+- **lectures** — 레슨 (course FK, order, content)
+- **enrollments** — 수강 (student + course UNIQUE, progress)
+- **assignments** — 과제 (course FK, due_date)
+
+## 설치 및 실행
 
 ```bash
-$ npm install
+# 설치
+npm install
+
+# 환경변수 설정
+cp .env.example .env
+
+# 개발 서버
+npm run start:dev
+
+# 테스트
+npm run test
+
+# Swagger 문서
+# http://localhost:3000/docs
 ```
-
-## Compile and run the project
-
-```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
-```
-
-## Run tests
-
-```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
-```
-
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
