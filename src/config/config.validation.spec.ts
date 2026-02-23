@@ -1,8 +1,26 @@
 import { configValidationSchema } from './config.validation.js';
 
+interface ValidatedEnv {
+  PORT: number;
+  NODE_ENV: string;
+  DB_HOST: string;
+  DB_PORT: number;
+  DB_USERNAME: string;
+  DB_PASSWORD: string;
+  DB_DATABASE: string;
+  MONGODB_URI: string;
+  JWT_SECRET: string;
+  JWT_EXPIRES_IN: string;
+  JWT_REFRESH_SECRET: string;
+  JWT_REFRESH_EXPIRES_IN: string;
+}
+
 describe('ConfigValidation', () => {
   it('should pass with default values when no env vars provided', () => {
-    const { error, value } = configValidationSchema.validate({});
+    const { error, value } = configValidationSchema.validate({}) as {
+      error: undefined;
+      value: ValidatedEnv;
+    };
     expect(error).toBeUndefined();
     expect(value.PORT).toBe(3000);
     expect(value.NODE_ENV).toBe('development');
@@ -26,7 +44,10 @@ describe('ConfigValidation', () => {
       JWT_REFRESH_EXPIRES_IN: '14d',
     };
 
-    const { error, value } = configValidationSchema.validate(env);
+    const { error, value } = configValidationSchema.validate(env) as {
+      error: undefined;
+      value: ValidatedEnv;
+    };
     expect(error).toBeUndefined();
     expect(value.PORT).toBe(4000);
     expect(value.NODE_ENV).toBe('production');

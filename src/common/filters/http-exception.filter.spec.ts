@@ -5,26 +5,30 @@ import {
   ArgumentsHost,
   Logger,
 } from '@nestjs/common';
+interface MockResponse {
+  status: jest.Mock & { (): MockResponse };
+  json: jest.Mock & { (): MockResponse };
+}
 
 describe('HttpExceptionFilter', () => {
   let filter: HttpExceptionFilter;
-  let mockResponse: any;
+  let mockResponse: MockResponse;
   let mockHost: ArgumentsHost;
 
   beforeEach(() => {
     filter = new HttpExceptionFilter();
 
     mockResponse = {
-      status: jest.fn().mockReturnThis(),
-      json: jest.fn().mockReturnThis(),
+      status: jest.fn().mockReturnThis() as MockResponse['status'],
+      json: jest.fn().mockReturnThis() as MockResponse['json'],
     };
 
     mockHost = {
       switchToHttp: () => ({
-        getResponse: () => mockResponse,
+        getResponse: (): MockResponse => mockResponse,
         getRequest: () => ({ url: '/test' }),
       }),
-    } as any;
+    } as unknown as ArgumentsHost;
 
     jest.spyOn(Logger.prototype, 'error').mockImplementation();
   });
@@ -39,7 +43,7 @@ describe('HttpExceptionFilter', () => {
       expect.objectContaining({
         statusCode: 404,
         message: 'Not Found',
-        timestamp: expect.any(String),
+        timestamp: expect.any(String) as string,
       }),
     );
   });

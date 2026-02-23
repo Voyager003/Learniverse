@@ -3,7 +3,7 @@ import { ExecutionContext, CallHandler } from '@nestjs/common';
 import { of } from 'rxjs';
 
 describe('TransformInterceptor', () => {
-  let interceptor: TransformInterceptor<any>;
+  let interceptor: TransformInterceptor<unknown>;
 
   beforeEach(() => {
     interceptor = new TransformInterceptor();

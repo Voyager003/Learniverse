@@ -8,6 +8,12 @@ import {
 } from '@nestjs/common';
 import { Response } from 'express';
 
+interface HttpExceptionObjectResponse {
+  message: string | string[];
+  error?: string;
+  statusCode?: number;
+}
+
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(HttpExceptionFilter.name);
@@ -26,17 +32,20 @@ export class HttpExceptionFilter implements ExceptionFilter {
         ? exception.getResponse()
         : 'Internal server error';
 
-    if (status === HttpStatus.INTERNAL_SERVER_ERROR) {
+    if (status >= (HttpStatus.INTERNAL_SERVER_ERROR as number)) {
       this.logger.error('Unhandled exception', exception);
     }
 
     const errorResponse = {
       statusCode: status,
-      message: typeof message === 'string' ? message : (message as any).message,
+      message:
+        typeof message === 'string'
+          ? message
+          : (message as HttpExceptionObjectResponse).message,
       error:
         typeof message === 'string'
           ? 'Error'
-          : (message as any).error ?? 'Error',
+          : ((message as HttpExceptionObjectResponse).error ?? 'Error'),
       timestamp: new Date().toISOString(),
     };
 
