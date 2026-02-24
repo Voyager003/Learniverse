@@ -5,6 +5,7 @@ import {
   HttpStatus,
   Post,
   Req,
+  UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
 import { AuthService } from './auth.service.js';
@@ -14,6 +15,7 @@ import { AuthResponseDto } from './dto/auth-response.dto.js';
 import { Public } from '../common/decorators/public.decorator.js';
 import { JwtRefreshGuard } from '../common/guards/jwt-refresh.guard.js';
 import { RequestUser } from './interfaces/request-user.interface.js';
+import { ERROR_MESSAGES } from '../common/constants/error-messages.constant.js';
 
 @Controller('auth')
 export class AuthController {
@@ -44,7 +46,11 @@ export class AuthController {
     },
   ): Promise<AuthResponseDto> {
     const { userId } = req.user;
-    const rawToken = req.get('Authorization')?.replace('Bearer ', '') ?? '';
+    const authHeader = req.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      throw new UnauthorizedException(ERROR_MESSAGES.INVALID_REFRESH_TOKEN);
+    }
+    const rawToken = authHeader.slice(7);
     return this.authService.refresh(userId, rawToken);
   }
 
