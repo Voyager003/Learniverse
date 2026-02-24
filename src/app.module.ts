@@ -8,6 +8,7 @@ import { CommonModule } from './common/common.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { UsersModule } from './users/users.module.js';
 import { CoursesModule } from './courses/courses.module.js';
+import { EnrollmentsModule } from './enrollments/enrollments.module.js';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard.js';
 import {
   appConfig,
@@ -29,6 +30,7 @@ import {
     AuthModule,
     UsersModule,
     CoursesModule,
+    EnrollmentsModule,
   ],
   controllers: [AppController],
   providers: [
