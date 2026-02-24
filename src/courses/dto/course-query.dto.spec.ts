@@ -4,7 +4,7 @@ import { CourseQueryDto } from './course-query.dto.js';
 import { CourseCategory, CourseDifficulty } from '../../common/enums/index.js';
 
 describe('CourseQueryDto', () => {
-  it('should pass with no filters (inherits pagination defaults)', async () => {
+  it('필터 없이 검증을 통과해야 한다 (페이지네이션 기본값 상속)', async () => {
     const dto = plainToInstance(CourseQueryDto, {});
     const errors = await validate(dto);
     expect(errors.length).toBe(0);
@@ -12,7 +12,7 @@ describe('CourseQueryDto', () => {
     expect(dto.limit).toBe(10);
   });
 
-  it('should pass with valid category filter', async () => {
+  it('유효한 category 필터로 검증을 통과해야 한다', async () => {
     const dto = plainToInstance(CourseQueryDto, {
       category: CourseCategory.PROGRAMMING,
     });
@@ -21,7 +21,7 @@ describe('CourseQueryDto', () => {
     expect(dto.category).toBe(CourseCategory.PROGRAMMING);
   });
 
-  it('should pass with valid difficulty filter', async () => {
+  it('유효한 difficulty 필터로 검증을 통과해야 한다', async () => {
     const dto = plainToInstance(CourseQueryDto, {
       difficulty: CourseDifficulty.ADVANCED,
     });
@@ -30,7 +30,7 @@ describe('CourseQueryDto', () => {
     expect(dto.difficulty).toBe(CourseDifficulty.ADVANCED);
   });
 
-  it('should pass with both filters and pagination', async () => {
+  it('두 필터와 페이지네이션 함께 검증을 통과해야 한다', async () => {
     const dto = plainToInstance(CourseQueryDto, {
       category: CourseCategory.DESIGN,
       difficulty: CourseDifficulty.INTERMEDIATE,
@@ -41,13 +41,13 @@ describe('CourseQueryDto', () => {
     expect(errors.length).toBe(0);
   });
 
-  it('should fail with invalid category', async () => {
+  it('유효하지 않은 category로 검증에 실패해야 한다', async () => {
     const dto = plainToInstance(CourseQueryDto, { category: 'invalid' });
     const errors = await validate(dto);
     expect(errors.length).toBeGreaterThan(0);
   });
 
-  it('should fail with invalid difficulty', async () => {
+  it('유효하지 않은 difficulty로 검증에 실패해야 한다', async () => {
     const dto = plainToInstance(CourseQueryDto, { difficulty: 'invalid' });
     const errors = await validate(dto);
     expect(errors.length).toBeGreaterThan(0);

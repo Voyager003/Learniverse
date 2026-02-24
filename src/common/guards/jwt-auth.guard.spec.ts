@@ -26,7 +26,7 @@ describe('JwtAuthGuard', () => {
       getArgs: jest.fn().mockReturnValue([{}, {}, undefined, undefined]),
     }) as unknown as ExecutionContext;
 
-  it('should allow access when route is marked as public', () => {
+  it('라우트가 public으로 표시된 경우 접근을 허용해야 한다', () => {
     reflector.getAllAndOverride!.mockReturnValue(true);
     const context = createMockContext();
 
@@ -39,7 +39,7 @@ describe('JwtAuthGuard', () => {
     ]);
   });
 
-  it('should call super.canActivate when route is not public', () => {
+  it('라우트가 public이 아닌 경우 super.canActivate를 호출해야 한다', () => {
     reflector.getAllAndOverride!.mockReturnValue(false);
     const context = createMockContext();
 
@@ -56,7 +56,7 @@ describe('JwtAuthGuard', () => {
     superCanActivate.mockRestore();
   });
 
-  it('should call super.canActivate when IS_PUBLIC_KEY is undefined', () => {
+  it('IS_PUBLIC_KEY가 undefined인 경우 super.canActivate를 호출해야 한다', () => {
     reflector.getAllAndOverride!.mockReturnValue(undefined);
     const context = createMockContext();
 

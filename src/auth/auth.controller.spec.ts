@@ -32,7 +32,7 @@ describe('AuthController', () => {
   });
 
   describe('POST /auth/register', () => {
-    it('should register a new user and return tokens', async () => {
+    it('새 사용자를 등록하고 토큰을 반환해야 한다', async () => {
       const dto: RegisterDto = {
         email: 'new@example.com',
         password: 'password123',
@@ -48,7 +48,7 @@ describe('AuthController', () => {
   });
 
   describe('POST /auth/login', () => {
-    it('should login and return tokens', async () => {
+    it('로그인하고 토큰을 반환해야 한다', async () => {
       const dto: LoginDto = {
         email: 'test@example.com',
         password: 'password123',
@@ -63,7 +63,7 @@ describe('AuthController', () => {
   });
 
   describe('POST /auth/refresh', () => {
-    it('should refresh tokens using the refresh token from header', async () => {
+    it('헤더의 리프레시 토큰으로 토큰을 갱신해야 한다', async () => {
       authService.refresh!.mockResolvedValue(mockTokens);
       const req = {
         user: {
@@ -85,7 +85,7 @@ describe('AuthController', () => {
   });
 
   describe('POST /auth/logout', () => {
-    it('should logout user by clearing refresh token', async () => {
+    it('리프레시 토큰을 제거하여 로그아웃해야 한다', async () => {
       authService.logout!.mockResolvedValue(undefined);
       const req = {
         user: {

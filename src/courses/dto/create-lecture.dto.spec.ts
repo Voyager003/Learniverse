@@ -9,13 +9,13 @@ describe('CreateLectureDto', () => {
     order: 1,
   };
 
-  it('should pass with valid input (without videoUrl)', async () => {
+  it('유효한 입력으로 검증을 통과해야 한다 (videoUrl 없이)', async () => {
     const dto = plainToInstance(CreateLectureDto, validInput);
     const errors = await validate(dto);
     expect(errors.length).toBe(0);
   });
 
-  it('should pass with valid videoUrl', async () => {
+  it('유효한 videoUrl로 검증을 통과해야 한다', async () => {
     const dto = plainToInstance(CreateLectureDto, {
       ...validInput,
       videoUrl: 'https://example.com/video1',
@@ -24,7 +24,7 @@ describe('CreateLectureDto', () => {
     expect(errors.length).toBe(0);
   });
 
-  it('should fail without title', async () => {
+  it('title 없이 검증에 실패해야 한다', async () => {
     const dto = plainToInstance(CreateLectureDto, {
       content: validInput.content,
       order: validInput.order,
@@ -33,7 +33,7 @@ describe('CreateLectureDto', () => {
     expect(errors.length).toBeGreaterThan(0);
   });
 
-  it('should fail without content', async () => {
+  it('content 없이 검증에 실패해야 한다', async () => {
     const dto = plainToInstance(CreateLectureDto, {
       title: validInput.title,
       order: validInput.order,
@@ -42,7 +42,7 @@ describe('CreateLectureDto', () => {
     expect(errors.length).toBeGreaterThan(0);
   });
 
-  it('should fail without order', async () => {
+  it('order 없이 검증에 실패해야 한다', async () => {
     const dto = plainToInstance(CreateLectureDto, {
       title: validInput.title,
       content: validInput.content,
@@ -51,7 +51,7 @@ describe('CreateLectureDto', () => {
     expect(errors.length).toBeGreaterThan(0);
   });
 
-  it('should fail with order less than 0', async () => {
+  it('order가 0 미만이면 검증에 실패해야 한다', async () => {
     const dto = plainToInstance(CreateLectureDto, {
       ...validInput,
       order: -1,
@@ -60,7 +60,7 @@ describe('CreateLectureDto', () => {
     expect(errors.length).toBeGreaterThan(0);
   });
 
-  it('should fail with invalid videoUrl', async () => {
+  it('유효하지 않은 videoUrl로 검증에 실패해야 한다', async () => {
     const dto = plainToInstance(CreateLectureDto, {
       ...validInput,
       videoUrl: 'not-a-url',

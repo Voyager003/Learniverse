@@ -32,7 +32,7 @@ describe('CourseResponseDto', () => {
     return course;
   };
 
-  it('should map course entity to response dto', () => {
+  it('Course 엔티티를 응답 DTO로 매핑해야 한다', () => {
     const course = createMockCourse();
     const dto = CourseResponseDto.from(course);
 
@@ -48,7 +48,7 @@ describe('CourseResponseDto', () => {
     expect(dto.updatedAt).toEqual(new Date('2025-01-02'));
   });
 
-  it('should map multiple courses with fromMany', () => {
+  it('fromMany로 여러 강좌를 매핑해야 한다', () => {
     const courses = [createMockCourse(), createMockCourse()];
     courses[1].id = 'course-uuid-2';
 
@@ -59,7 +59,7 @@ describe('CourseResponseDto', () => {
     expect(dtos[1].id).toBe('course-uuid-2');
   });
 
-  it('should handle course without tutor relation loaded', () => {
+  it('tutor 관계가 로드되지 않은 강좌를 처리해야 한다', () => {
     const course = createMockCourse();
     course.tutor = undefined as unknown as User;
 
@@ -68,7 +68,7 @@ describe('CourseResponseDto', () => {
     expect(dto.tutorName).toBeUndefined();
   });
 
-  it('should map lectures when relation is loaded', () => {
+  it('관계가 로드된 경우 lectures를 매핑해야 한다', () => {
     const course = createMockCourse();
     const lecture = new Lecture();
     lecture.id = 'lecture-uuid';
@@ -88,7 +88,7 @@ describe('CourseResponseDto', () => {
     expect(dto.lectures![0].id).toBe('lecture-uuid');
   });
 
-  it('should set lectures to undefined when relation is not loaded', () => {
+  it('관계가 로드되지 않은 경우 lectures를 undefined로 설정해야 한다', () => {
     const course = createMockCourse();
     // lectures not loaded (undefined)
 

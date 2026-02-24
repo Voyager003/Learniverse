@@ -3,7 +3,7 @@ import { plainToInstance } from 'class-transformer';
 import { PaginationQueryDto } from './pagination-query.dto.js';
 
 describe('PaginationQueryDto', () => {
-  it('should use default values when no input', async () => {
+  it('입력이 없을 때 기본값을 사용해야 한다', async () => {
     const dto = plainToInstance(PaginationQueryDto, {});
     const errors = await validate(dto);
     expect(errors.length).toBe(0);
@@ -11,7 +11,7 @@ describe('PaginationQueryDto', () => {
     expect(dto.limit).toBe(10);
   });
 
-  it('should accept valid page and limit', async () => {
+  it('유효한 page와 limit을 허용해야 한다', async () => {
     const dto = plainToInstance(PaginationQueryDto, { page: 2, limit: 20 });
     const errors = await validate(dto);
     expect(errors.length).toBe(0);
@@ -19,19 +19,19 @@ describe('PaginationQueryDto', () => {
     expect(dto.limit).toBe(20);
   });
 
-  it('should reject page less than 1', async () => {
+  it('page가 1 미만이면 검증에 실패해야 한다', async () => {
     const dto = plainToInstance(PaginationQueryDto, { page: 0 });
     const errors = await validate(dto);
     expect(errors.length).toBeGreaterThan(0);
   });
 
-  it('should reject limit greater than 100', async () => {
+  it('limit이 100을 초과하면 검증에 실패해야 한다', async () => {
     const dto = plainToInstance(PaginationQueryDto, { limit: 101 });
     const errors = await validate(dto);
     expect(errors.length).toBeGreaterThan(0);
   });
 
-  it('should transform string values to numbers', async () => {
+  it('문자열 값을 숫자로 변환해야 한다', async () => {
     const dto = plainToInstance(PaginationQueryDto, {
       page: '3',
       limit: '15',

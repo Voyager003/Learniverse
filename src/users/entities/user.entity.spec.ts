@@ -1,8 +1,8 @@
 import { User } from './user.entity.js';
 import { Role } from '../../common/enums/index.js';
 
-describe('User Entity', () => {
-  it('should create a user with default values', () => {
+describe('User 엔티티', () => {
+  it('기본값으로 사용자를 생성해야 한다', () => {
     const user = new User();
     user.email = 'test@example.com';
     user.passwordHash = 'hashed';
@@ -16,28 +16,28 @@ describe('User Entity', () => {
     expect(user.refreshToken).toBeNull();
   });
 
-  it('should allow setting role to TUTOR', () => {
+  it('역할을 TUTOR로 설정할 수 있어야 한다', () => {
     const user = new User();
     user.role = Role.TUTOR;
 
     expect(user.role).toBe(Role.TUTOR);
   });
 
-  it('should allow setting role to ADMIN', () => {
+  it('역할을 ADMIN으로 설정할 수 있어야 한다', () => {
     const user = new User();
     user.role = Role.ADMIN;
 
     expect(user.role).toBe(Role.ADMIN);
   });
 
-  it('should allow setting refreshToken', () => {
+  it('refreshToken을 설정할 수 있어야 한다', () => {
     const user = new User();
     user.refreshToken = 'some-hashed-token';
 
     expect(user.refreshToken).toBe('some-hashed-token');
   });
 
-  it('should allow deactivating user', () => {
+  it('사용자를 비활성화할 수 있어야 한다', () => {
     const user = new User();
     user.isActive = false;
 

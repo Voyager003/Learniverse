@@ -2,8 +2,8 @@ import { Course } from './course.entity.js';
 import { CourseCategory, CourseDifficulty } from '../../common/enums/index.js';
 import { User } from '../../users/entities/user.entity.js';
 
-describe('Course Entity', () => {
-  it('should create a course with default values', () => {
+describe('Course 엔티티', () => {
+  it('기본값으로 강좌를 생성해야 한다', () => {
     const course = new Course();
     course.title = 'NestJS Fundamentals';
     course.description = 'Learn NestJS from scratch';
@@ -17,13 +17,13 @@ describe('Course Entity', () => {
     expect(course.isPublished).toBe(false);
   });
 
-  it('should allow setting isPublished to true', () => {
+  it('isPublished를 true로 설정할 수 있어야 한다', () => {
     const course = new Course();
     course.isPublished = true;
     expect(course.isPublished).toBe(true);
   });
 
-  it('should allow setting tutor relation', () => {
+  it('tutor 관계를 설정할 수 있어야 한다', () => {
     const course = new Course();
     const tutor = new User();
     tutor.id = 'tutor-uuid';
@@ -35,7 +35,7 @@ describe('Course Entity', () => {
     expect(course.tutorId).toBe('tutor-uuid');
   });
 
-  it('should allow all category values', () => {
+  it('모든 카테고리 값을 허용해야 한다', () => {
     const course = new Course();
 
     for (const category of Object.values(CourseCategory)) {
@@ -44,7 +44,7 @@ describe('Course Entity', () => {
     }
   });
 
-  it('should allow all difficulty values', () => {
+  it('모든 난이도 값을 허용해야 한다', () => {
     const course = new Course();
 
     for (const difficulty of Object.values(CourseDifficulty)) {

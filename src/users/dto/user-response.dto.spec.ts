@@ -16,7 +16,7 @@ describe('UserResponseDto', () => {
   };
 
   describe('from', () => {
-    it('should create a UserResponseDto from a User entity', () => {
+    it('User 엔티티로부터 UserResponseDto를 생성해야 한다', () => {
       const dto = UserResponseDto.from(mockUser);
 
       expect(dto.id).toBe('uuid-1');
@@ -28,13 +28,13 @@ describe('UserResponseDto', () => {
       expect(dto.updatedAt).toEqual(new Date('2025-01-02'));
     });
 
-    it('should NOT expose passwordHash', () => {
+    it('passwordHash를 노출하지 않아야 한다', () => {
       const dto = UserResponseDto.from(mockUser);
 
       expect(dto).not.toHaveProperty('passwordHash');
     });
 
-    it('should NOT expose refreshToken', () => {
+    it('refreshToken을 노출하지 않아야 한다', () => {
       const dto = UserResponseDto.from(mockUser);
 
       expect(dto).not.toHaveProperty('refreshToken');
@@ -42,7 +42,7 @@ describe('UserResponseDto', () => {
   });
 
   describe('fromMany', () => {
-    it('should convert an array of User entities', () => {
+    it('User 엔티티 배열을 변환해야 한다', () => {
       const users = [mockUser, { ...mockUser, id: 'uuid-2', name: 'User 2' }];
       const dtos = UserResponseDto.fromMany(users);
 

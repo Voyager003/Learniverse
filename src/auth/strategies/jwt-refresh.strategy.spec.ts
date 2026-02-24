@@ -35,7 +35,7 @@ describe('JwtRefreshStrategy', () => {
       role: Role.STUDENT,
     };
 
-    it('should return userId and email for a valid payload', () => {
+    it('유효한 페이로드에 대해 userId와 email을 반환해야 한다', () => {
       const result = strategy.validate(payload);
 
       expect(result).toEqual({
@@ -45,7 +45,7 @@ describe('JwtRefreshStrategy', () => {
       });
     });
 
-    it('should throw UnauthorizedException if sub is missing', () => {
+    it('sub가 없으면 UnauthorizedException을 던져야 한다', () => {
       const invalidPayload = {
         email: 'test@example.com',
         role: Role.STUDENT,

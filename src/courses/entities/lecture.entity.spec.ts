@@ -1,8 +1,8 @@
 import { Lecture } from './lecture.entity.js';
 import { Course } from './course.entity.js';
 
-describe('Lecture Entity', () => {
-  it('should create a lecture with assigned values', () => {
+describe('Lecture 엔티티', () => {
+  it('지정된 값으로 강의를 생성해야 한다', () => {
     const lecture = new Lecture();
     lecture.title = 'Introduction to TypeScript';
     lecture.content = 'TypeScript basics and setup';
@@ -15,13 +15,13 @@ describe('Lecture Entity', () => {
     expect(lecture.order).toBe(1);
   });
 
-  it('should allow nullable videoUrl', () => {
+  it('videoUrl이 null을 허용해야 한다', () => {
     const lecture = new Lecture();
     lecture.videoUrl = null;
     expect(lecture.videoUrl).toBeNull();
   });
 
-  it('should allow setting course relation', () => {
+  it('course 관계를 설정할 수 있어야 한다', () => {
     const lecture = new Lecture();
     const course = new Course();
     course.id = 'course-uuid';
@@ -33,7 +33,7 @@ describe('Lecture Entity', () => {
     expect(lecture.courseId).toBe('course-uuid');
   });
 
-  it('should allow different order values', () => {
+  it('다양한 order 값을 허용해야 한다', () => {
     const lecture = new Lecture();
 
     lecture.order = 0;

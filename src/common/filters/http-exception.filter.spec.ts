@@ -33,7 +33,7 @@ describe('HttpExceptionFilter', () => {
     jest.spyOn(Logger.prototype, 'error').mockImplementation();
   });
 
-  it('should handle HttpException with string message', () => {
+  it('문자열 메시지를 가진 HttpException을 처리해야 한다', () => {
     const exception = new HttpException('Not Found', HttpStatus.NOT_FOUND);
 
     filter.catch(exception, mockHost);
@@ -48,7 +48,7 @@ describe('HttpExceptionFilter', () => {
     );
   });
 
-  it('should handle HttpException with object response', () => {
+  it('객체 응답을 가진 HttpException을 처리해야 한다', () => {
     const exception = new HttpException(
       { message: 'Validation failed', error: 'Bad Request' },
       HttpStatus.BAD_REQUEST,
@@ -66,7 +66,7 @@ describe('HttpExceptionFilter', () => {
     );
   });
 
-  it('should handle unknown exceptions as 500', () => {
+  it('알 수 없는 예외를 500으로 처리해야 한다', () => {
     const exception = new Error('Something broke');
 
     filter.catch(exception, mockHost);
