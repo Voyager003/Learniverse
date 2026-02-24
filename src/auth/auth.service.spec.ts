@@ -34,6 +34,7 @@ describe('AuthService', () => {
   beforeEach(async () => {
     usersService = {
       findByEmail: jest.fn(),
+      findById: jest.fn(),
       create: jest.fn(),
       updateRefreshToken: jest.fn(),
     };
@@ -150,7 +151,7 @@ describe('AuthService', () => {
         ...mockUser,
         refreshToken: 'hashed-old-refresh',
       };
-      usersService.findByEmail!.mockResolvedValue(userWithToken);
+      usersService.findById!.mockResolvedValue(userWithToken);
       mockedCompare.mockResolvedValue(true);
       jwtService.signAsync!.mockResolvedValueOnce('new-access-token');
       jwtService.signAsync!.mockResolvedValueOnce('new-refresh-token');
@@ -161,10 +162,11 @@ describe('AuthService', () => {
 
       expect(result.accessToken).toBe('new-access-token');
       expect(result.refreshToken).toBe('new-refresh-token');
+      expect(usersService.findById).toHaveBeenCalledWith('uuid-1');
     });
 
     it('should throw UnauthorizedException if user has no refresh token', async () => {
-      usersService.findByEmail!.mockResolvedValue(mockUser);
+      usersService.findById!.mockResolvedValue(mockUser);
 
       await expect(authService.refresh('uuid-1', 'some-token')).rejects.toThrow(
         UnauthorizedException,
@@ -176,7 +178,7 @@ describe('AuthService', () => {
         ...mockUser,
         refreshToken: 'hashed-old-refresh',
       };
-      usersService.findByEmail!.mockResolvedValue(userWithToken);
+      usersService.findById!.mockResolvedValue(userWithToken);
       mockedCompare.mockResolvedValue(false);
 
       await expect(
