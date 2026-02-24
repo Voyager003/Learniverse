@@ -20,6 +20,8 @@ export const ERROR_MESSAGES = {
   ENROLLMENT_NOT_FOUND: 'Enrollment not found',
   ALREADY_ENROLLED: 'Already enrolled in this course',
   NOT_ENROLLMENT_OWNER: 'You are not the owner of this enrollment',
+  ENROLLMENT_NOT_ACTIVE: 'Cannot update progress on a non-active enrollment',
+  CANNOT_ENROLL_OWN_COURSE: 'Cannot enroll in your own course',
 
   // Assignments
   ASSIGNMENT_NOT_FOUND: 'Assignment not found',

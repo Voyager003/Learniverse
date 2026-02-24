@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, QueryFailedError, Repository } from 'typeorm';
@@ -9,6 +10,8 @@ import { Enrollment } from './entities/enrollment.entity.js';
 import { Course } from '../courses/entities/course.entity.js';
 import { CreateEnrollmentDto } from './dto/create-enrollment.dto.js';
 import { UpdateProgressDto } from './dto/update-progress.dto.js';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto.js';
+import { PaginatedResponseDto } from '../common/dto/paginated-response.dto.js';
 import { EnrollmentStatus } from '../common/enums/index.js';
 import { ERROR_MESSAGES } from '../common/constants/error-messages.constant.js';
 
@@ -35,12 +38,35 @@ export class EnrollmentsService {
       throw new NotFoundException(ERROR_MESSAGES.COURSE_NOT_FOUND);
     }
 
-    // App-level duplicate check
+    // H-2: Prevent self-enrollment
+    if (course.tutorId === studentId) {
+      throw new BadRequestException(ERROR_MESSAGES.CANNOT_ENROLL_OWN_COURSE);
+    }
+
+    // C-1: Only block if ACTIVE or COMPLETED enrollment exists
     const existing = await this.enrollmentRepository.findOne({
-      where: { studentId, courseId: dto.courseId },
+      where: {
+        studentId,
+        courseId: dto.courseId,
+        status: In([EnrollmentStatus.ACTIVE, EnrollmentStatus.COMPLETED]),
+      },
     });
     if (existing) {
       throw new ConflictException(ERROR_MESSAGES.ALREADY_ENROLLED);
+    }
+
+    // C-1: Reactivate DROPPED enrollment instead of creating new
+    const dropped = await this.enrollmentRepository.findOne({
+      where: {
+        studentId,
+        courseId: dto.courseId,
+        status: EnrollmentStatus.DROPPED,
+      },
+    });
+    if (dropped) {
+      dropped.status = EnrollmentStatus.ACTIVE;
+      dropped.progress = 0;
+      return this.enrollmentRepository.save(dropped);
     }
 
     // Create and save with DB-level unique constraint as safety net
@@ -63,12 +89,22 @@ export class EnrollmentsService {
     }
   }
 
-  async findMyEnrollments(studentId: string): Promise<Enrollment[]> {
-    return this.enrollmentRepository.find({
+  // H-4: Paginated enrollment list
+  async findMyEnrollments(
+    studentId: string,
+    query: PaginationQueryDto,
+  ): Promise<PaginatedResponseDto<Enrollment>> {
+    const { page, limit } = query;
+
+    const [data, total] = await this.enrollmentRepository.findAndCount({
       where: { studentId },
       relations: ['course'],
       order: { createdAt: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
     });
+
+    return new PaginatedResponseDto(data, total, page, limit);
   }
 
   async updateProgress(
@@ -82,6 +118,11 @@ export class EnrollmentsService {
 
     if (!enrollment) {
       throw new NotFoundException(ERROR_MESSAGES.ENROLLMENT_NOT_FOUND);
+    }
+
+    // C-2: Only ACTIVE enrollments can have progress updated
+    if (enrollment.status !== EnrollmentStatus.ACTIVE) {
+      throw new BadRequestException(ERROR_MESSAGES.ENROLLMENT_NOT_ACTIVE);
     }
 
     enrollment.progress = dto.progress;

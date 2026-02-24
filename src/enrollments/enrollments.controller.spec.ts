@@ -1,11 +1,16 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { EnrollmentsController } from './enrollments.controller.js';
 import { EnrollmentsService } from './enrollments.service.js';
 import { Enrollment } from './entities/enrollment.entity.js';
 import { EnrollmentResponseDto } from './dto/enrollment-response.dto.js';
 import { EnrollmentStatus, Role } from '../common/enums/index.js';
 import { Course } from '../courses/entities/course.entity.js';
+import { PaginatedResponseDto } from '../common/dto/paginated-response.dto.js';
 
 const mockDate = new Date('2025-01-01');
 
@@ -87,28 +92,43 @@ describe('EnrollmentsController', () => {
         controller.enroll(mockReqStudent, { courseId: 'nonexistent' }),
       ).rejects.toThrow(NotFoundException);
     });
+
+    it('should propagate BadRequestException for self-enrollment', async () => {
+      enrollmentsService.enroll!.mockRejectedValue(new BadRequestException());
+
+      await expect(
+        controller.enroll(mockReqStudent, { courseId: 'own-course' }),
+      ).rejects.toThrow(BadRequestException);
+    });
   });
 
   describe('GET /enrollments/my', () => {
-    it('should return array of EnrollmentResponseDto', async () => {
-      enrollmentsService.findMyEnrollments!.mockResolvedValue([mockEnrollment]);
+    it('should return paginated EnrollmentResponseDto list', async () => {
+      const paginated = new PaginatedResponseDto([mockEnrollment], 1, 1, 10);
+      enrollmentsService.findMyEnrollments!.mockResolvedValue(paginated);
 
-      const result = await controller.findMyEnrollments(mockReqStudent);
+      const query = { page: 1, limit: 10 };
+      const result = await controller.findMyEnrollments(mockReqStudent, query);
 
-      expect(result).toHaveLength(1);
-      expect(result[0]).toBeInstanceOf(EnrollmentResponseDto);
-      expect(result[0].id).toBe('enrollment-uuid');
+      expect(result.data[0]).toBeInstanceOf(EnrollmentResponseDto);
+      expect(result.total).toBe(1);
       expect(enrollmentsService.findMyEnrollments).toHaveBeenCalledWith(
         'student-uuid',
+        query,
       );
     });
 
-    it('should return empty array if no enrollments', async () => {
-      enrollmentsService.findMyEnrollments!.mockResolvedValue([]);
+    it('should return empty result if no enrollments', async () => {
+      const paginated = new PaginatedResponseDto([], 0, 1, 10);
+      enrollmentsService.findMyEnrollments!.mockResolvedValue(paginated);
 
-      const result = await controller.findMyEnrollments(mockReqStudent);
+      const result = await controller.findMyEnrollments(mockReqStudent, {
+        page: 1,
+        limit: 10,
+      });
 
-      expect(result).toHaveLength(0);
+      expect(result.data).toHaveLength(0);
+      expect(result.total).toBe(0);
     });
   });
 
@@ -143,6 +163,18 @@ describe('EnrollmentsController', () => {
           progress: 50,
         }),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should propagate BadRequestException for non-active enrollment', async () => {
+      enrollmentsService.updateProgress!.mockRejectedValue(
+        new BadRequestException(),
+      );
+
+      await expect(
+        controller.updateProgress(mockReqStudent, 'enrollment-uuid', {
+          progress: 50,
+        }),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 });

@@ -1,7 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { In, ObjectLiteral, QueryFailedError, Repository } from 'typeorm';
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { EnrollmentsService } from './enrollments.service.js';
 import { Enrollment } from './entities/enrollment.entity.js';
 import { Course } from '../courses/entities/course.entity.js';
@@ -18,6 +22,7 @@ const createMockRepository = <
 >(): MockRepository<T> => ({
   findOne: jest.fn(),
   find: jest.fn(),
+  findAndCount: jest.fn(),
   create: jest.fn(),
   save: jest.fn(),
 });
@@ -54,7 +59,11 @@ describe('EnrollmentsService', () => {
     const dto: CreateEnrollmentDto = { courseId: 'course-uuid' };
 
     it('should create and return an enrollment', async () => {
-      const course = { id: 'course-uuid', isPublished: true } as Course;
+      const course = {
+        id: 'course-uuid',
+        isPublished: true,
+        tutorId: 'tutor-uuid',
+      } as Course;
       const enrollment = {
         id: 'enrollment-uuid',
         studentId: 'student-uuid',
@@ -64,7 +73,11 @@ describe('EnrollmentsService', () => {
       } as Enrollment;
 
       courseRepository.findOne!.mockResolvedValue(course);
-      enrollmentRepository.findOne!.mockResolvedValue(null);
+      // First findOne: active/completed check → null
+      // Second findOne: dropped check → null
+      enrollmentRepository
+        .findOne!.mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null);
       enrollmentRepository.create!.mockReturnValue(enrollment);
       enrollmentRepository.save!.mockResolvedValue(enrollment);
 
@@ -85,31 +98,99 @@ describe('EnrollmentsService', () => {
       );
     });
 
-    it('should throw NotFoundException if course is not published', async () => {
-      courseRepository.findOne!.mockResolvedValue(null);
+    it('should throw BadRequestException if enrolling in own course', async () => {
+      const course = {
+        id: 'course-uuid',
+        isPublished: true,
+        tutorId: 'tutor-uuid',
+      } as Course;
+      courseRepository.findOne!.mockResolvedValue(course);
 
-      await expect(service.enroll('student-uuid', dto)).rejects.toThrow(
-        NotFoundException,
+      await expect(service.enroll('tutor-uuid', dto)).rejects.toThrow(
+        BadRequestException,
       );
     });
 
-    it('should throw ConflictException if already enrolled (app level)', async () => {
-      const course = { id: 'course-uuid', isPublished: true } as Course;
-      const existing = { id: 'existing-enrollment' } as Enrollment;
+    it('should throw ConflictException if ACTIVE enrollment exists', async () => {
+      const course = {
+        id: 'course-uuid',
+        isPublished: true,
+        tutorId: 'tutor-uuid',
+      } as Course;
+      const existing = {
+        id: 'existing-enrollment',
+        status: EnrollmentStatus.ACTIVE,
+      } as Enrollment;
 
       courseRepository.findOne!.mockResolvedValue(course);
-      enrollmentRepository.findOne!.mockResolvedValue(existing);
+      enrollmentRepository.findOne!.mockResolvedValueOnce(existing);
 
       await expect(service.enroll('student-uuid', dto)).rejects.toThrow(
         ConflictException,
       );
     });
 
-    it('should throw ConflictException on DB unique constraint violation', async () => {
-      const course = { id: 'course-uuid', isPublished: true } as Course;
+    it('should throw ConflictException if COMPLETED enrollment exists', async () => {
+      const course = {
+        id: 'course-uuid',
+        isPublished: true,
+        tutorId: 'tutor-uuid',
+      } as Course;
+      const existing = {
+        id: 'existing-enrollment',
+        status: EnrollmentStatus.COMPLETED,
+      } as Enrollment;
 
       courseRepository.findOne!.mockResolvedValue(course);
-      enrollmentRepository.findOne!.mockResolvedValue(null);
+      enrollmentRepository.findOne!.mockResolvedValueOnce(existing);
+
+      await expect(service.enroll('student-uuid', dto)).rejects.toThrow(
+        ConflictException,
+      );
+    });
+
+    it('should reactivate DROPPED enrollment instead of creating new', async () => {
+      const course = {
+        id: 'course-uuid',
+        isPublished: true,
+        tutorId: 'tutor-uuid',
+      } as Course;
+      const dropped = {
+        id: 'dropped-enrollment',
+        studentId: 'student-uuid',
+        courseId: 'course-uuid',
+        status: EnrollmentStatus.DROPPED,
+        progress: 50,
+      } as Enrollment;
+
+      courseRepository.findOne!.mockResolvedValue(course);
+      // First findOne: active/completed check → null
+      // Second findOne: dropped check → found
+      enrollmentRepository
+        .findOne!.mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(dropped);
+      enrollmentRepository.save!.mockImplementation((e: Enrollment) =>
+        Promise.resolve(e),
+      );
+
+      const result = await service.enroll('student-uuid', dto);
+
+      expect(result.status).toBe(EnrollmentStatus.ACTIVE);
+      expect(result.progress).toBe(0);
+      expect(enrollmentRepository.create).not.toHaveBeenCalled();
+    });
+
+    it('should throw ConflictException on DB unique constraint violation', async () => {
+      const course = {
+        id: 'course-uuid',
+        isPublished: true,
+        tutorId: 'tutor-uuid',
+      } as Course;
+
+      courseRepository.findOne!.mockResolvedValue(course);
+      enrollmentRepository
+        .findOne!.mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null);
       enrollmentRepository.create!.mockReturnValue({} as Enrollment);
 
       const driverError = Object.assign(new Error('duplicate key'), {
@@ -128,10 +209,16 @@ describe('EnrollmentsService', () => {
     });
 
     it('should rethrow unexpected errors from save', async () => {
-      const course = { id: 'course-uuid', isPublished: true } as Course;
+      const course = {
+        id: 'course-uuid',
+        isPublished: true,
+        tutorId: 'tutor-uuid',
+      } as Course;
 
       courseRepository.findOne!.mockResolvedValue(course);
-      enrollmentRepository.findOne!.mockResolvedValue(null);
+      enrollmentRepository
+        .findOne!.mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null);
       enrollmentRepository.create!.mockReturnValue({} as Enrollment);
       enrollmentRepository.save!.mockRejectedValue(new Error('unexpected'));
 
@@ -144,30 +231,52 @@ describe('EnrollmentsService', () => {
   // --- findMyEnrollments ---
 
   describe('findMyEnrollments', () => {
-    it('should return enrollments with course relation', async () => {
+    it('should return paginated enrollments with course relation', async () => {
       const enrollments = [
         { id: 'e1', studentId: 'student-uuid', course: { title: 'Course 1' } },
         { id: 'e2', studentId: 'student-uuid', course: { title: 'Course 2' } },
       ] as Enrollment[];
 
-      enrollmentRepository.find!.mockResolvedValue(enrollments);
+      enrollmentRepository.findAndCount!.mockResolvedValue([enrollments, 2]);
 
-      const result = await service.findMyEnrollments('student-uuid');
+      const result = await service.findMyEnrollments('student-uuid', {
+        page: 1,
+        limit: 10,
+      });
 
-      expect(result).toEqual(enrollments);
-      expect(enrollmentRepository.find).toHaveBeenCalledWith({
+      expect(result.data).toEqual(enrollments);
+      expect(result.total).toBe(2);
+      expect(result.page).toBe(1);
+      expect(result.limit).toBe(10);
+      expect(enrollmentRepository.findAndCount).toHaveBeenCalledWith({
         where: { studentId: 'student-uuid' },
         relations: ['course'],
         order: { createdAt: 'DESC' },
+        skip: 0,
+        take: 10,
       });
     });
 
-    it('should return empty array if no enrollments', async () => {
-      enrollmentRepository.find!.mockResolvedValue([]);
+    it('should return empty result if no enrollments', async () => {
+      enrollmentRepository.findAndCount!.mockResolvedValue([[], 0]);
 
-      const result = await service.findMyEnrollments('student-uuid');
+      const result = await service.findMyEnrollments('student-uuid', {
+        page: 1,
+        limit: 10,
+      });
 
-      expect(result).toEqual([]);
+      expect(result.data).toEqual([]);
+      expect(result.total).toBe(0);
+    });
+
+    it('should calculate correct skip for page 2', async () => {
+      enrollmentRepository.findAndCount!.mockResolvedValue([[], 0]);
+
+      await service.findMyEnrollments('student-uuid', { page: 2, limit: 10 });
+
+      expect(enrollmentRepository.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({ skip: 10, take: 10 }),
+      );
     });
   });
 
@@ -219,6 +328,40 @@ describe('EnrollmentsService', () => {
 
       expect(result.progress).toBe(100);
       expect(result.status).toBe(EnrollmentStatus.COMPLETED);
+    });
+
+    it('should throw BadRequestException if enrollment is COMPLETED', async () => {
+      const enrollment = {
+        id: 'enrollment-uuid',
+        studentId: 'student-uuid',
+        status: EnrollmentStatus.COMPLETED,
+        progress: 100,
+      } as Enrollment;
+
+      enrollmentRepository.findOne!.mockResolvedValue(enrollment);
+
+      await expect(
+        service.updateProgress('enrollment-uuid', 'student-uuid', {
+          progress: 50,
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException if enrollment is DROPPED', async () => {
+      const enrollment = {
+        id: 'enrollment-uuid',
+        studentId: 'student-uuid',
+        status: EnrollmentStatus.DROPPED,
+        progress: 30,
+      } as Enrollment;
+
+      enrollmentRepository.findOne!.mockResolvedValue(enrollment);
+
+      await expect(
+        service.updateProgress('enrollment-uuid', 'student-uuid', {
+          progress: 50,
+        }),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw NotFoundException if enrollment not found', async () => {
