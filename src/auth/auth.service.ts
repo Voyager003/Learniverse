@@ -11,7 +11,9 @@ import { UsersService } from '../users/users.service.js';
 import { AuthResponseDto } from './dto/auth-response.dto.js';
 import { RegisterDto } from './dto/register.dto.js';
 import { LoginDto } from './dto/login.dto.js';
+import { JwtPayload } from './interfaces/jwt-payload.interface.js';
 import { ERROR_MESSAGES } from '../common/constants/error-messages.constant.js';
+import { Role } from '../common/enums/index.js';
 
 @Injectable()
 export class AuthService {
@@ -91,9 +93,9 @@ export class AuthService {
   private async generateTokens(
     userId: string,
     email: string,
-    role: string,
+    role: Role,
   ): Promise<AuthResponseDto> {
-    const payload: Record<string, string> = { sub: userId, email, role };
+    const payload: JwtPayload = { sub: userId, email, role };
 
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {

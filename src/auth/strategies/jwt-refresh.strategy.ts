@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { JwtPayload } from '../interfaces/jwt-payload.interface.js';
+import { RequestUser } from '../interfaces/request-user.interface.js';
 import { ERROR_MESSAGES } from '../../common/constants/error-messages.constant.js';
 
 @Injectable()
@@ -18,11 +19,7 @@ export class JwtRefreshStrategy extends PassportStrategy(
     });
   }
 
-  validate(payload: JwtPayload): {
-    userId: string;
-    email: string;
-    role: string;
-  } {
+  validate(payload: JwtPayload): RequestUser {
     if (!payload.sub) {
       throw new UnauthorizedException(ERROR_MESSAGES.INVALID_REFRESH_TOKEN);
     }
