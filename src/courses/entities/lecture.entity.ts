@@ -6,10 +6,12 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { Course } from './course.entity.js';
 
 @Entity('lectures')
+@Index(['courseId', 'order'], { unique: true })
 export class Lecture {
   @PrimaryGeneratedColumn('uuid')
   id: string;

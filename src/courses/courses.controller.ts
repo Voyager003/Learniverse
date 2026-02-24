@@ -76,7 +76,12 @@ export class CoursesController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateCourseDto,
   ): Promise<CourseResponseDto> {
-    const course = await this.coursesService.update(id, req.user.userId, dto);
+    const course = await this.coursesService.update(
+      id,
+      req.user.userId,
+      req.user.role,
+      dto,
+    );
     return CourseResponseDto.from(course);
   }
 
@@ -88,7 +93,7 @@ export class CoursesController {
     @Req() req: { user: RequestUser },
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<void> {
-    await this.coursesService.remove(id, req.user.userId);
+    await this.coursesService.remove(id, req.user.userId, req.user.role);
   }
 
   // --- Lecture endpoints ---
@@ -104,6 +109,7 @@ export class CoursesController {
     const lecture = await this.coursesService.createLecture(
       id,
       req.user.userId,
+      req.user.role,
       dto,
     );
     return LectureResponseDto.from(lecture);
@@ -122,6 +128,7 @@ export class CoursesController {
       id,
       lid,
       req.user.userId,
+      req.user.role,
       dto,
     );
     return LectureResponseDto.from(lecture);
@@ -136,6 +143,11 @@ export class CoursesController {
     @Param('id', ParseUUIDPipe) id: string,
     @Param('lid', ParseUUIDPipe) lid: string,
   ): Promise<void> {
-    await this.coursesService.removeLecture(id, lid, req.user.userId);
+    await this.coursesService.removeLecture(
+      id,
+      lid,
+      req.user.userId,
+      req.user.role,
+    );
   }
 }

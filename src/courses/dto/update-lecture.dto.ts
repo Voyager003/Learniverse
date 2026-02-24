@@ -17,10 +17,11 @@ export class UpdateLectureDto {
   @MaxLength(200)
   title?: string;
 
-  @ApiPropertyOptional({ example: 'Updated content' })
+  @ApiPropertyOptional({ example: 'Updated content', maxLength: 50000 })
   @IsOptional()
   @IsString()
   @MinLength(1)
+  @MaxLength(50000)
   content?: string;
 
   @ApiPropertyOptional({ example: 'https://example.com/new-video' })

@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { CourseCategory, CourseDifficulty } from '../../common/enums/index.js';
 import { Course } from '../entities/course.entity.js';
+import { LectureResponseDto } from './lecture-response.dto.js';
 
 export class CourseResponseDto {
   @ApiProperty()
@@ -27,6 +28,9 @@ export class CourseResponseDto {
   @ApiPropertyOptional()
   tutorName?: string;
 
+  @ApiPropertyOptional({ type: () => [LectureResponseDto] })
+  lectures?: LectureResponseDto[];
+
   @ApiProperty()
   createdAt: Date;
 
@@ -43,6 +47,9 @@ export class CourseResponseDto {
     dto.isPublished = course.isPublished;
     dto.tutorId = course.tutorId;
     dto.tutorName = course.tutor?.name;
+    dto.lectures = course.lectures
+      ? LectureResponseDto.fromMany(course.lectures)
+      : undefined;
     dto.createdAt = course.createdAt;
     dto.updatedAt = course.updatedAt;
     return dto;

@@ -17,10 +17,11 @@ export class UpdateCourseDto {
   @MaxLength(200)
   title?: string;
 
-  @ApiPropertyOptional({ example: 'Updated description' })
+  @ApiPropertyOptional({ example: 'Updated description', maxLength: 5000 })
   @IsOptional()
   @IsString()
   @MinLength(1)
+  @MaxLength(5000)
   description?: string;
 
   @ApiPropertyOptional({ enum: CourseCategory })

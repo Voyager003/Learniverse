@@ -9,9 +9,10 @@ export class CreateCourseDto {
   @MaxLength(200)
   title: string;
 
-  @ApiProperty({ example: 'Learn NestJS from scratch' })
+  @ApiProperty({ example: 'Learn NestJS from scratch', maxLength: 5000 })
   @IsString()
   @MinLength(1)
+  @MaxLength(5000)
   description: string;
 
   @ApiProperty({ enum: CourseCategory, example: CourseCategory.PROGRAMMING })

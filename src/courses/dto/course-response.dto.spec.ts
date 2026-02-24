@@ -1,5 +1,7 @@
 import { CourseResponseDto } from './course-response.dto.js';
+import { LectureResponseDto } from './lecture-response.dto.js';
 import { Course } from '../entities/course.entity.js';
+import { Lecture } from '../entities/lecture.entity.js';
 import { User } from '../../users/entities/user.entity.js';
 import {
   CourseCategory,
@@ -64,5 +66,34 @@ describe('CourseResponseDto', () => {
     const dto = CourseResponseDto.from(course);
 
     expect(dto.tutorName).toBeUndefined();
+  });
+
+  it('should map lectures when relation is loaded', () => {
+    const course = createMockCourse();
+    const lecture = new Lecture();
+    lecture.id = 'lecture-uuid';
+    lecture.title = 'Lecture 1';
+    lecture.content = 'Content';
+    lecture.videoUrl = null;
+    lecture.order = 1;
+    lecture.courseId = 'course-uuid';
+    lecture.createdAt = new Date('2025-01-01');
+    lecture.updatedAt = new Date('2025-01-01');
+    course.lectures = [lecture];
+
+    const dto = CourseResponseDto.from(course);
+
+    expect(dto.lectures).toHaveLength(1);
+    expect(dto.lectures![0]).toBeInstanceOf(LectureResponseDto);
+    expect(dto.lectures![0].id).toBe('lecture-uuid');
+  });
+
+  it('should set lectures to undefined when relation is not loaded', () => {
+    const course = createMockCourse();
+    // lectures not loaded (undefined)
+
+    const dto = CourseResponseDto.from(course);
+
+    expect(dto.lectures).toBeUndefined();
   });
 });

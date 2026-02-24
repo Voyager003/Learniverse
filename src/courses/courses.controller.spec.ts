@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { CoursesController } from './courses.controller.js';
 import { CoursesService } from './courses.service.js';
 import { Course } from './entities/course.entity.js';
@@ -32,7 +32,7 @@ const mockCourse: Course = {
   description: 'Learn NestJS',
   category: CourseCategory.PROGRAMMING,
   difficulty: CourseDifficulty.BEGINNER,
-  isPublished: false,
+  isPublished: true,
   tutorId: 'tutor-uuid',
   tutor: mockTutor,
   lectures: [],
@@ -121,13 +121,16 @@ describe('CoursesController', () => {
   });
 
   describe('GET /courses/:id', () => {
-    it('should return a CourseResponseDto', async () => {
-      coursesService.findById!.mockResolvedValue(mockCourse);
+    it('should return a CourseResponseDto with lectures', async () => {
+      const courseWithLectures = { ...mockCourse, lectures: [mockLecture] };
+      coursesService.findById!.mockResolvedValue(courseWithLectures);
 
       const result = await controller.findOne('course-uuid');
 
       expect(result).toBeInstanceOf(CourseResponseDto);
       expect(result.id).toBe('course-uuid');
+      expect(result.lectures).toHaveLength(1);
+      expect(result.lectures![0]).toBeInstanceOf(LectureResponseDto);
     });
 
     it('should propagate NotFoundException', async () => {
@@ -153,8 +156,17 @@ describe('CoursesController', () => {
       expect(coursesService.update).toHaveBeenCalledWith(
         'course-uuid',
         'tutor-uuid',
+        Role.TUTOR,
         { title: 'Updated' },
       );
+    });
+
+    it('should propagate ForbiddenException', async () => {
+      coursesService.update!.mockRejectedValue(new ForbiddenException());
+
+      await expect(
+        controller.update(mockReqTutor, 'course-uuid', { title: 'x' }),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
@@ -167,7 +179,16 @@ describe('CoursesController', () => {
       expect(coursesService.remove).toHaveBeenCalledWith(
         'course-uuid',
         'tutor-uuid',
+        Role.TUTOR,
       );
+    });
+
+    it('should propagate ForbiddenException', async () => {
+      coursesService.remove!.mockRejectedValue(new ForbiddenException());
+
+      await expect(
+        controller.remove(mockReqTutor, 'course-uuid'),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
@@ -189,8 +210,21 @@ describe('CoursesController', () => {
       expect(coursesService.createLecture).toHaveBeenCalledWith(
         'course-uuid',
         'tutor-uuid',
+        Role.TUTOR,
         dto,
       );
+    });
+
+    it('should propagate ForbiddenException', async () => {
+      coursesService.createLecture!.mockRejectedValue(new ForbiddenException());
+
+      await expect(
+        controller.createLecture(mockReqTutor, 'course-uuid', {
+          title: 'x',
+          content: 'x',
+          order: 1,
+        }),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
@@ -212,8 +246,19 @@ describe('CoursesController', () => {
         'course-uuid',
         'lecture-uuid',
         'tutor-uuid',
+        Role.TUTOR,
         { title: 'Updated' },
       );
+    });
+
+    it('should propagate ForbiddenException', async () => {
+      coursesService.updateLecture!.mockRejectedValue(new ForbiddenException());
+
+      await expect(
+        controller.updateLecture(mockReqTutor, 'course-uuid', 'lecture-uuid', {
+          title: 'x',
+        }),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
@@ -231,7 +276,16 @@ describe('CoursesController', () => {
         'course-uuid',
         'lecture-uuid',
         'tutor-uuid',
+        Role.TUTOR,
       );
+    });
+
+    it('should propagate ForbiddenException', async () => {
+      coursesService.removeLecture!.mockRejectedValue(new ForbiddenException());
+
+      await expect(
+        controller.removeLecture(mockReqTutor, 'course-uuid', 'lecture-uuid'),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 });
