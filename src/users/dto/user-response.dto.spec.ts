@@ -25,6 +25,7 @@ describe('UserResponseDto', () => {
       expect(dto.role).toBe(Role.STUDENT);
       expect(dto.isActive).toBe(true);
       expect(dto.createdAt).toEqual(new Date('2025-01-01'));
+      expect(dto.updatedAt).toEqual(new Date('2025-01-02'));
     });
 
     it('should NOT expose passwordHash', () => {

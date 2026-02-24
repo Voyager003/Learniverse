@@ -21,6 +21,9 @@ export class UserResponseDto {
   @ApiProperty()
   createdAt: Date;
 
+  @ApiProperty()
+  updatedAt: Date;
+
   static from(user: User): UserResponseDto {
     const dto = new UserResponseDto();
     dto.id = user.id;
@@ -29,6 +32,7 @@ export class UserResponseDto {
     dto.role = user.role;
     dto.isActive = user.isActive;
     dto.createdAt = user.createdAt;
+    dto.updatedAt = user.updatedAt;
     return dto;
   }
 
