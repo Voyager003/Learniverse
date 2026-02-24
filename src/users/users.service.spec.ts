@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { QueryFailedError, Repository } from 'typeorm';
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { UsersService } from './users.service.js';
 import { User } from './entities/user.entity.js';
@@ -112,6 +112,30 @@ describe('UsersService', () => {
           email: 'exists@example.com',
           passwordHash: 'hashed',
           name: 'Duplicate',
+        }),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it('should throw ConflictException on unique constraint violation (race condition)', async () => {
+      repository.findOne!.mockResolvedValue(null);
+      const user = { id: 'uuid-new', email: 'race@example.com' } as User;
+      repository.create!.mockReturnValue(user);
+
+      const driverError = Object.assign(new Error('duplicate key'), {
+        code: '23505',
+      });
+      const queryError = new QueryFailedError(
+        'INSERT INTO users',
+        [],
+        driverError,
+      );
+      repository.save!.mockRejectedValue(queryError);
+
+      await expect(
+        service.create({
+          email: 'race@example.com',
+          passwordHash: 'hashed',
+          name: 'Race User',
         }),
       ).rejects.toThrow(ConflictException);
     });

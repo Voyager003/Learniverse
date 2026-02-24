@@ -4,9 +4,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { QueryFailedError, Repository } from 'typeorm';
 import { User } from './entities/user.entity.js';
 import { ERROR_MESSAGES } from '../common/constants/error-messages.constant.js';
+
+const UNIQUE_VIOLATION_CODE = '23505';
 
 @Injectable()
 export class UsersService {
@@ -37,7 +39,18 @@ export class UsersService {
       throw new ConflictException(ERROR_MESSAGES.EMAIL_ALREADY_EXISTS);
     }
     const user = this.usersRepository.create(data);
-    return this.usersRepository.save(user);
+    try {
+      return await this.usersRepository.save(user);
+    } catch (error: unknown) {
+      if (
+        error instanceof QueryFailedError &&
+        (error.driverError as Record<string, unknown>)['code'] ===
+          UNIQUE_VIOLATION_CODE
+      ) {
+        throw new ConflictException(ERROR_MESSAGES.EMAIL_ALREADY_EXISTS);
+      }
+      throw error;
+    }
   }
 
   async update(id: string, data: Partial<Pick<User, 'name'>>): Promise<User> {
