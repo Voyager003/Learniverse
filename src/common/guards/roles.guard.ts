@@ -7,6 +7,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import { Role } from '../enums/index.js';
 import { ROLES_KEY } from '../decorators/roles.decorator.js';
+import { ERROR_MESSAGES } from '../constants/error-messages.constant.js';
 
 interface RequestUser {
   userId: string;
@@ -32,7 +33,7 @@ export class RolesGuard implements CanActivate {
     const user = request.user;
 
     if (!user || !requiredRoles.includes(user.role)) {
-      throw new ForbiddenException();
+      throw new ForbiddenException(ERROR_MESSAGES.INSUFFICIENT_PERMISSIONS);
     }
 
     return true;

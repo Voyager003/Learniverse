@@ -51,11 +51,12 @@ describe('RolesGuard', () => {
     expect(guard.canActivate(context)).toBe(true);
   });
 
-  it('should throw ForbiddenException when user lacks the required role', () => {
+  it('should throw ForbiddenException with message when user lacks the required role', () => {
     reflector.getAllAndOverride!.mockReturnValue([Role.ADMIN]);
     const context = createMockContext(Role.STUDENT);
 
     expect(() => guard.canActivate(context)).toThrow(ForbiddenException);
+    expect(() => guard.canActivate(context)).toThrow('Insufficient permissions');
   });
 
   it('should throw ForbiddenException when roles required but no user in request', () => {
@@ -69,5 +70,6 @@ describe('RolesGuard', () => {
     } as unknown as ExecutionContext;
 
     expect(() => guard.canActivate(context)).toThrow(ForbiddenException);
+    expect(() => guard.canActivate(context)).toThrow('Insufficient permissions');
   });
 });

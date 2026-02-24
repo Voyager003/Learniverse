@@ -4,6 +4,7 @@ export const ERROR_MESSAGES = {
   EMAIL_ALREADY_EXISTS: 'Email already exists',
   INVALID_REFRESH_TOKEN: 'Invalid refresh token',
   UNAUTHORIZED: 'Unauthorized access',
+  INSUFFICIENT_PERMISSIONS: 'Insufficient permissions',
 
   // Users
   USER_NOT_FOUND: 'User not found',
