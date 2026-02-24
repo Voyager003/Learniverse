@@ -1,9 +1,15 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { UsersService } from '../../users/users.service.js';
+import { User } from '../../users/entities/user.entity.js';
 import { JwtPayload } from '../interfaces/jwt-payload.interface.js';
+import { RequestUser } from '../interfaces/request-user.interface.js';
 import { ERROR_MESSAGES } from '../../common/constants/error-messages.constant.js';
 
 @Injectable()
@@ -19,10 +25,16 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     });
   }
 
-  async validate(
-    payload: JwtPayload,
-  ): Promise<{ userId: string; email: string; role: string }> {
-    const user = await this.usersService.findById(payload.sub);
+  async validate(payload: JwtPayload): Promise<RequestUser> {
+    let user: User;
+    try {
+      user = await this.usersService.findById(payload.sub);
+    } catch (error: unknown) {
+      if (error instanceof NotFoundException) {
+        throw new UnauthorizedException(ERROR_MESSAGES.UNAUTHORIZED);
+      }
+      throw error;
+    }
 
     if (!user.isActive) {
       throw new UnauthorizedException(ERROR_MESSAGES.UNAUTHORIZED);

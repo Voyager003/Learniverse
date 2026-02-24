@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
-import { UnauthorizedException } from '@nestjs/common';
+import { NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { JwtStrategy } from './jwt.strategy.js';
 import { UsersService } from '../../users/users.service.js';
 import { User } from '../../users/entities/user.entity.js';
@@ -68,8 +68,10 @@ describe('JwtStrategy', () => {
       expect(usersService.findById).toHaveBeenCalledWith('uuid-1');
     });
 
-    it('should throw UnauthorizedException if user not found', async () => {
-      usersService.findById!.mockRejectedValue(new UnauthorizedException());
+    it('should throw UnauthorizedException if user not found (NotFoundException converted)', async () => {
+      usersService.findById!.mockRejectedValue(
+        new NotFoundException('User not found'),
+      );
 
       await expect(strategy.validate(payload)).rejects.toThrow(
         UnauthorizedException,
