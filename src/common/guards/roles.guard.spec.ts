@@ -56,7 +56,9 @@ describe('RolesGuard', () => {
     const context = createMockContext(Role.STUDENT);
 
     expect(() => guard.canActivate(context)).toThrow(ForbiddenException);
-    expect(() => guard.canActivate(context)).toThrow('Insufficient permissions');
+    expect(() => guard.canActivate(context)).toThrow(
+      'Insufficient permissions',
+    );
   });
 
   it('should throw ForbiddenException when roles required but no user in request', () => {
@@ -70,6 +72,8 @@ describe('RolesGuard', () => {
     } as unknown as ExecutionContext;
 
     expect(() => guard.canActivate(context)).toThrow(ForbiddenException);
-    expect(() => guard.canActivate(context)).toThrow('Insufficient permissions');
+    expect(() => guard.canActivate(context)).toThrow(
+      'Insufficient permissions',
+    );
   });
 });
