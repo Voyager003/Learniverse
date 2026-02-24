@@ -165,6 +165,19 @@ describe('AuthService', () => {
       expect(usersService.findById).toHaveBeenCalledWith('uuid-1');
     });
 
+    it('should throw UnauthorizedException if user is not active', async () => {
+      const inactiveUser = {
+        ...mockUser,
+        refreshToken: 'hashed-old-refresh',
+        isActive: false,
+      };
+      usersService.findById!.mockResolvedValue(inactiveUser);
+
+      await expect(authService.refresh('uuid-1', 'some-token')).rejects.toThrow(
+        UnauthorizedException,
+      );
+    });
+
     it('should throw UnauthorizedException if user has no refresh token', async () => {
       usersService.findById!.mockResolvedValue(mockUser);
 
