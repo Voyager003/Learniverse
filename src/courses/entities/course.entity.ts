@@ -5,10 +5,12 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   ManyToOne,
+  OneToMany,
   JoinColumn,
 } from 'typeorm';
 import { CourseCategory, CourseDifficulty } from '../../common/enums/index.js';
 import { User } from '../../users/entities/user.entity.js';
+import { Lecture } from './lecture.entity.js';
 
 @Entity('courses')
 export class Course {
@@ -36,6 +38,9 @@ export class Course {
 
   @Column({ name: 'tutor_id' })
   tutorId: string;
+
+  @OneToMany(() => Lecture, (lecture) => lecture.course)
+  lectures: Lecture[];
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
