@@ -11,12 +11,12 @@ jest.mock('@nestjs/common', () => {
   };
 });
 
-describe('Public Decorator', () => {
-  it('should export IS_PUBLIC_KEY constant', () => {
+describe('Public 데코레이터', () => {
+  it('IS_PUBLIC_KEY 상수를 export해야 한다', () => {
     expect(IS_PUBLIC_KEY).toBe('isPublic');
   });
 
-  it('should call SetMetadata with IS_PUBLIC_KEY and true', () => {
+  it('IS_PUBLIC_KEY와 true로 SetMetadata를 호출해야 한다', () => {
     Public();
     expect(SetMetadata).toHaveBeenCalledWith('isPublic', true);
   });

@@ -71,7 +71,7 @@ describe('AuthService', () => {
   });
 
   describe('register', () => {
-    it('should register a new user and return tokens', async () => {
+    it('새 사용자를 등록하고 토큰을 반환해야 한다', async () => {
       usersService.findByEmail!.mockResolvedValue(null);
       mockedHash.mockResolvedValue('hashed-pw');
       usersService.create!.mockResolvedValue({ ...mockUser, id: 'new-uuid' });
@@ -90,7 +90,7 @@ describe('AuthService', () => {
       expect(usersService.create).toHaveBeenCalled();
     });
 
-    it('should throw ConflictException if email exists', async () => {
+    it('이메일이 이미 존재하면 ConflictException을 던져야 한다', async () => {
       usersService.findByEmail!.mockResolvedValue(mockUser);
 
       await expect(
@@ -104,7 +104,7 @@ describe('AuthService', () => {
   });
 
   describe('login', () => {
-    it('should return tokens for valid credentials', async () => {
+    it('유효한 자격 증명으로 토큰을 반환해야 한다', async () => {
       usersService.findByEmail!.mockResolvedValue(mockUser);
       mockedCompare.mockResolvedValue(true);
       jwtService.signAsync!.mockResolvedValueOnce('access-token');
@@ -121,7 +121,7 @@ describe('AuthService', () => {
       expect(result.refreshToken).toBe('refresh-token');
     });
 
-    it('should throw UnauthorizedException for wrong email', async () => {
+    it('잘못된 이메일로 UnauthorizedException을 던져야 한다', async () => {
       usersService.findByEmail!.mockResolvedValue(null);
 
       await expect(
@@ -132,7 +132,7 @@ describe('AuthService', () => {
       ).rejects.toThrow(UnauthorizedException);
     });
 
-    it('should throw UnauthorizedException for wrong password', async () => {
+    it('잘못된 비밀번호로 UnauthorizedException을 던져야 한다', async () => {
       usersService.findByEmail!.mockResolvedValue(mockUser);
       mockedCompare.mockResolvedValue(false);
 
@@ -146,7 +146,7 @@ describe('AuthService', () => {
   });
 
   describe('refresh', () => {
-    it('should return new tokens for valid refresh token', async () => {
+    it('유효한 리프레시 토큰으로 새 토큰을 반환해야 한다', async () => {
       const userWithToken = {
         ...mockUser,
         refreshToken: 'hashed-old-refresh',
@@ -165,7 +165,7 @@ describe('AuthService', () => {
       expect(usersService.findById).toHaveBeenCalledWith('uuid-1');
     });
 
-    it('should throw UnauthorizedException if user is not active', async () => {
+    it('비활성 사용자이면 UnauthorizedException을 던져야 한다', async () => {
       const inactiveUser = {
         ...mockUser,
         refreshToken: 'hashed-old-refresh',
@@ -178,7 +178,7 @@ describe('AuthService', () => {
       );
     });
 
-    it('should throw UnauthorizedException if user has no refresh token', async () => {
+    it('리프레시 토큰이 없으면 UnauthorizedException을 던져야 한다', async () => {
       usersService.findById!.mockResolvedValue(mockUser);
 
       await expect(authService.refresh('uuid-1', 'some-token')).rejects.toThrow(
@@ -186,7 +186,7 @@ describe('AuthService', () => {
       );
     });
 
-    it('should throw UnauthorizedException if refresh token does not match', async () => {
+    it('리프레시 토큰이 일치하지 않으면 UnauthorizedException을 던져야 한다', async () => {
       const userWithToken = {
         ...mockUser,
         refreshToken: 'hashed-old-refresh',
@@ -201,7 +201,7 @@ describe('AuthService', () => {
   });
 
   describe('logout', () => {
-    it('should set refresh token to null', async () => {
+    it('리프레시 토큰을 null로 설정해야 한다', async () => {
       usersService.updateRefreshToken!.mockResolvedValue(undefined);
 
       await authService.logout('uuid-1');

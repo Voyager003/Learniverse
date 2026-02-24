@@ -16,7 +16,7 @@ interface ValidatedEnv {
 }
 
 describe('ConfigValidation', () => {
-  it('should pass with default values when no env vars provided', () => {
+  it('환경변수가 없을 때 기본값으로 검증을 통과해야 한다', () => {
     const { error, value } = configValidationSchema.validate({}) as {
       error: undefined;
       value: ValidatedEnv;
@@ -28,7 +28,7 @@ describe('ConfigValidation', () => {
     expect(value.DB_PORT).toBe(5432);
   });
 
-  it('should pass with valid custom values', () => {
+  it('유효한 커스텀 값으로 검증을 통과해야 한다', () => {
     const env = {
       PORT: 4000,
       NODE_ENV: 'production',
@@ -53,7 +53,7 @@ describe('ConfigValidation', () => {
     expect(value.NODE_ENV).toBe('production');
   });
 
-  it('should reject invalid NODE_ENV', () => {
+  it('유효하지 않은 NODE_ENV를 거부해야 한다', () => {
     const { error } = configValidationSchema.validate({
       NODE_ENV: 'invalid',
     });
@@ -61,7 +61,7 @@ describe('ConfigValidation', () => {
     expect(error!.message).toContain('NODE_ENV');
   });
 
-  it('should reject non-numeric PORT', () => {
+  it('숫자가 아닌 PORT를 거부해야 한다', () => {
     const { error } = configValidationSchema.validate({
       PORT: 'not-a-number',
     });

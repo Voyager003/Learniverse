@@ -9,7 +9,7 @@ describe('TransformInterceptor', () => {
     interceptor = new TransformInterceptor();
   });
 
-  it('should wrap response data with statusCode', (done) => {
+  it('응답 데이터를 statusCode와 함께 래핑해야 한다', (done) => {
     const mockContext = {
       switchToHttp: () => ({
         getResponse: () => ({ statusCode: 200 }),
@@ -29,7 +29,7 @@ describe('TransformInterceptor', () => {
     });
   });
 
-  it('should handle null data', (done) => {
+  it('null 데이터를 처리해야 한다', (done) => {
     const mockContext = {
       switchToHttp: () => ({
         getResponse: () => ({ statusCode: 204 }),
@@ -49,7 +49,7 @@ describe('TransformInterceptor', () => {
     });
   });
 
-  it('should handle array data', (done) => {
+  it('배열 데이터를 처리해야 한다', (done) => {
     const mockContext = {
       switchToHttp: () => ({
         getResponse: () => ({ statusCode: 200 }),

@@ -2,7 +2,7 @@ import { validate } from 'class-validator';
 import { UpdateUserDto } from './update-user.dto.js';
 
 describe('UpdateUserDto', () => {
-  it('should pass validation with a valid name', async () => {
+  it('유효한 이름으로 검증을 통과해야 한다', async () => {
     const dto = new UpdateUserDto();
     dto.name = 'Updated Name';
 
@@ -10,14 +10,14 @@ describe('UpdateUserDto', () => {
     expect(errors).toHaveLength(0);
   });
 
-  it('should pass validation when name is omitted (all fields optional)', async () => {
+  it('이름 생략 시 검증을 통과해야 한다 (모든 필드 선택적)', async () => {
     const dto = new UpdateUserDto();
 
     const errors = await validate(dto);
     expect(errors).toHaveLength(0);
   });
 
-  it('should fail validation when name is too short', async () => {
+  it('이름이 너무 짧으면 검증에 실패해야 한다', async () => {
     const dto = new UpdateUserDto();
     dto.name = '';
 
@@ -26,7 +26,7 @@ describe('UpdateUserDto', () => {
     expect(errors[0].property).toBe('name');
   });
 
-  it('should fail validation when name exceeds max length', async () => {
+  it('이름이 최대 길이를 초과하면 검증에 실패해야 한다', async () => {
     const dto = new UpdateUserDto();
     dto.name = 'a'.repeat(51);
 

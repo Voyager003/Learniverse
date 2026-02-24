@@ -58,7 +58,7 @@ describe('EnrollmentsService', () => {
   describe('enroll', () => {
     const dto: CreateEnrollmentDto = { courseId: 'course-uuid' };
 
-    it('should create and return an enrollment', async () => {
+    it('수강을 생성하고 반환해야 한다', async () => {
       const course = {
         id: 'course-uuid',
         isPublished: true,
@@ -90,7 +90,7 @@ describe('EnrollmentsService', () => {
       });
     });
 
-    it('should throw NotFoundException if course not found', async () => {
+    it('강좌를 찾을 수 없으면 NotFoundException을 던져야 한다', async () => {
       courseRepository.findOne!.mockResolvedValue(null);
 
       await expect(service.enroll('student-uuid', dto)).rejects.toThrow(
@@ -98,7 +98,7 @@ describe('EnrollmentsService', () => {
       );
     });
 
-    it('should throw BadRequestException if enrolling in own course', async () => {
+    it('자신의 강좌에 수강 신청하면 BadRequestException을 던져야 한다', async () => {
       const course = {
         id: 'course-uuid',
         isPublished: true,
@@ -111,7 +111,7 @@ describe('EnrollmentsService', () => {
       );
     });
 
-    it('should throw ConflictException if ACTIVE enrollment exists', async () => {
+    it('ACTIVE 수강이 존재하면 ConflictException을 던져야 한다', async () => {
       const course = {
         id: 'course-uuid',
         isPublished: true,
@@ -130,7 +130,7 @@ describe('EnrollmentsService', () => {
       );
     });
 
-    it('should throw ConflictException if COMPLETED enrollment exists', async () => {
+    it('COMPLETED 수강이 존재하면 ConflictException을 던져야 한다', async () => {
       const course = {
         id: 'course-uuid',
         isPublished: true,
@@ -149,7 +149,7 @@ describe('EnrollmentsService', () => {
       );
     });
 
-    it('should reactivate DROPPED enrollment instead of creating new', async () => {
+    it('새로 생성하는 대신 DROPPED 수강을 재활성화해야 한다', async () => {
       const course = {
         id: 'course-uuid',
         isPublished: true,
@@ -180,7 +180,7 @@ describe('EnrollmentsService', () => {
       expect(enrollmentRepository.create).not.toHaveBeenCalled();
     });
 
-    it('should throw ConflictException on DB unique constraint violation', async () => {
+    it('DB 유니크 제약 조건 위반 시 ConflictException을 던져야 한다', async () => {
       const course = {
         id: 'course-uuid',
         isPublished: true,
@@ -208,7 +208,7 @@ describe('EnrollmentsService', () => {
       );
     });
 
-    it('should rethrow unexpected errors from save', async () => {
+    it('save에서 발생한 예상치 못한 에러를 다시 던져야 한다', async () => {
       const course = {
         id: 'course-uuid',
         isPublished: true,
@@ -231,7 +231,7 @@ describe('EnrollmentsService', () => {
   // --- findMyEnrollments ---
 
   describe('findMyEnrollments', () => {
-    it('should return paginated enrollments with course relation', async () => {
+    it('course 관계와 함께 페이지네이션된 수강 목록을 반환해야 한다', async () => {
       const enrollments = [
         { id: 'e1', studentId: 'student-uuid', course: { title: 'Course 1' } },
         { id: 'e2', studentId: 'student-uuid', course: { title: 'Course 2' } },
@@ -257,7 +257,7 @@ describe('EnrollmentsService', () => {
       });
     });
 
-    it('should return empty result if no enrollments', async () => {
+    it('수강이 없으면 빈 결과를 반환해야 한다', async () => {
       enrollmentRepository.findAndCount!.mockResolvedValue([[], 0]);
 
       const result = await service.findMyEnrollments('student-uuid', {
@@ -269,7 +269,7 @@ describe('EnrollmentsService', () => {
       expect(result.total).toBe(0);
     });
 
-    it('should calculate correct skip for page 2', async () => {
+    it('페이지 2에 대해 올바른 skip을 계산해야 한다', async () => {
       enrollmentRepository.findAndCount!.mockResolvedValue([[], 0]);
 
       await service.findMyEnrollments('student-uuid', { page: 2, limit: 10 });
@@ -283,7 +283,7 @@ describe('EnrollmentsService', () => {
   // --- updateProgress ---
 
   describe('updateProgress', () => {
-    it('should update progress and return enrollment', async () => {
+    it('진행률을 업데이트하고 수강을 반환해야 한다', async () => {
       const enrollment = {
         id: 'enrollment-uuid',
         studentId: 'student-uuid',
@@ -306,7 +306,7 @@ describe('EnrollmentsService', () => {
       expect(result.status).toBe(EnrollmentStatus.ACTIVE);
     });
 
-    it('should auto-complete when progress reaches 100', async () => {
+    it('진행률이 100에 도달하면 자동으로 완료 처리해야 한다', async () => {
       const enrollment = {
         id: 'enrollment-uuid',
         studentId: 'student-uuid',
@@ -330,7 +330,7 @@ describe('EnrollmentsService', () => {
       expect(result.status).toBe(EnrollmentStatus.COMPLETED);
     });
 
-    it('should throw BadRequestException if enrollment is COMPLETED', async () => {
+    it('수강이 COMPLETED 상태이면 BadRequestException을 던져야 한다', async () => {
       const enrollment = {
         id: 'enrollment-uuid',
         studentId: 'student-uuid',
@@ -347,7 +347,7 @@ describe('EnrollmentsService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('should throw BadRequestException if enrollment is DROPPED', async () => {
+    it('수강이 DROPPED 상태이면 BadRequestException을 던져야 한다', async () => {
       const enrollment = {
         id: 'enrollment-uuid',
         studentId: 'student-uuid',
@@ -364,7 +364,7 @@ describe('EnrollmentsService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('should throw NotFoundException if enrollment not found', async () => {
+    it('수강을 찾을 수 없으면 NotFoundException을 던져야 한다', async () => {
       enrollmentRepository.findOne!.mockResolvedValue(null);
 
       await expect(
@@ -372,7 +372,7 @@ describe('EnrollmentsService', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('should throw NotFoundException if enrollment belongs to another student', async () => {
+    it('다른 학생의 수강이면 NotFoundException을 던져야 한다', async () => {
       enrollmentRepository.findOne!.mockResolvedValue(null);
 
       await expect(
@@ -386,7 +386,7 @@ describe('EnrollmentsService', () => {
   // --- isEnrolled ---
 
   describe('isEnrolled', () => {
-    it('should return true if actively enrolled', async () => {
+    it('활성 수강 중이면 true를 반환해야 한다', async () => {
       const enrollment = {
         id: 'enrollment-uuid',
         status: EnrollmentStatus.ACTIVE,
@@ -405,7 +405,7 @@ describe('EnrollmentsService', () => {
       });
     });
 
-    it('should return true if enrollment is completed', async () => {
+    it('수강이 완료 상태이면 true를 반환해야 한다', async () => {
       const enrollment = {
         id: 'enrollment-uuid',
         status: EnrollmentStatus.COMPLETED,
@@ -417,7 +417,7 @@ describe('EnrollmentsService', () => {
       expect(result).toBe(true);
     });
 
-    it('should return false if not enrolled', async () => {
+    it('수강하지 않았으면 false를 반환해야 한다', async () => {
       enrollmentRepository.findOne!.mockResolvedValue(null);
 
       const result = await service.isEnrolled('student-uuid', 'course-uuid');

@@ -26,14 +26,14 @@ describe('RolesGuard', () => {
       }),
     }) as unknown as ExecutionContext;
 
-  it('should allow access when no roles are required', () => {
+  it('필요한 역할이 없으면 접근을 허용해야 한다', () => {
     reflector.getAllAndOverride!.mockReturnValue(undefined);
     const context = createMockContext(Role.STUDENT);
 
     expect(guard.canActivate(context)).toBe(true);
   });
 
-  it('should allow access when user has the required role', () => {
+  it('사용자가 필요한 역할을 가지고 있으면 접근을 허용해야 한다', () => {
     reflector.getAllAndOverride!.mockReturnValue([Role.ADMIN]);
     const context = createMockContext(Role.ADMIN);
 
@@ -44,14 +44,14 @@ describe('RolesGuard', () => {
     ]);
   });
 
-  it('should allow access when user has one of multiple required roles', () => {
+  it('여러 필요 역할 중 하나를 가지고 있으면 접근을 허용해야 한다', () => {
     reflector.getAllAndOverride!.mockReturnValue([Role.ADMIN, Role.TUTOR]);
     const context = createMockContext(Role.TUTOR);
 
     expect(guard.canActivate(context)).toBe(true);
   });
 
-  it('should throw ForbiddenException with message when user lacks the required role', () => {
+  it('필요한 역할이 없으면 ForbiddenException을 던져야 한다', () => {
     reflector.getAllAndOverride!.mockReturnValue([Role.ADMIN]);
     const context = createMockContext(Role.STUDENT);
 
@@ -61,7 +61,7 @@ describe('RolesGuard', () => {
     );
   });
 
-  it('should throw ForbiddenException when roles required but no user in request', () => {
+  it('역할이 필요하지만 요청에 사용자가 없으면 ForbiddenException을 던져야 한다', () => {
     reflector.getAllAndOverride!.mockReturnValue([Role.ADMIN]);
     const context = {
       getHandler: jest.fn(),

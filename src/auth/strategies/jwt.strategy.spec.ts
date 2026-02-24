@@ -55,7 +55,7 @@ describe('JwtStrategy', () => {
       role: Role.STUDENT,
     };
 
-    it('should return user data for a valid payload', async () => {
+    it('유효한 페이로드에 대해 사용자 데이터를 반환해야 한다', async () => {
       usersService.findById!.mockResolvedValue(mockUser);
 
       const result = await strategy.validate(payload);
@@ -68,7 +68,7 @@ describe('JwtStrategy', () => {
       expect(usersService.findById).toHaveBeenCalledWith('uuid-1');
     });
 
-    it('should throw UnauthorizedException if user not found (NotFoundException converted)', async () => {
+    it('사용자를 찾을 수 없으면 UnauthorizedException을 던져야 한다 (NotFoundException 변환)', async () => {
       usersService.findById!.mockRejectedValue(
         new NotFoundException('User not found'),
       );
@@ -78,7 +78,7 @@ describe('JwtStrategy', () => {
       );
     });
 
-    it('should throw UnauthorizedException if user is inactive', async () => {
+    it('비활성 사용자이면 UnauthorizedException을 던져야 한다', async () => {
       usersService.findById!.mockResolvedValue({
         ...mockUser,
         isActive: false,

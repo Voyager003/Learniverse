@@ -3,19 +3,19 @@ import { plainToInstance } from 'class-transformer';
 import { UpdateLectureDto } from './update-lecture.dto.js';
 
 describe('UpdateLectureDto', () => {
-  it('should pass with empty input (all fields optional)', async () => {
+  it('빈 입력으로 검증을 통과해야 한다 (모든 필드 선택적)', async () => {
     const dto = plainToInstance(UpdateLectureDto, {});
     const errors = await validate(dto);
     expect(errors.length).toBe(0);
   });
 
-  it('should pass with partial update (title only)', async () => {
+  it('부분 업데이트로 검증을 통과해야 한다 (title만)', async () => {
     const dto = plainToInstance(UpdateLectureDto, { title: 'Updated Title' });
     const errors = await validate(dto);
     expect(errors.length).toBe(0);
   });
 
-  it('should pass with valid videoUrl', async () => {
+  it('유효한 videoUrl로 검증을 통과해야 한다', async () => {
     const dto = plainToInstance(UpdateLectureDto, {
       videoUrl: 'https://example.com/new-video',
     });
@@ -23,19 +23,19 @@ describe('UpdateLectureDto', () => {
     expect(errors.length).toBe(0);
   });
 
-  it('should fail with invalid videoUrl', async () => {
+  it('유효하지 않은 videoUrl로 검증에 실패해야 한다', async () => {
     const dto = plainToInstance(UpdateLectureDto, { videoUrl: 'not-a-url' });
     const errors = await validate(dto);
     expect(errors.length).toBeGreaterThan(0);
   });
 
-  it('should fail with order less than 0', async () => {
+  it('order가 0 미만이면 검증에 실패해야 한다', async () => {
     const dto = plainToInstance(UpdateLectureDto, { order: -1 });
     const errors = await validate(dto);
     expect(errors.length).toBeGreaterThan(0);
   });
 
-  it('should pass with all valid fields', async () => {
+  it('모든 유효한 필드로 검증을 통과해야 한다', async () => {
     const dto = plainToInstance(UpdateLectureDto, {
       title: 'Updated',
       content: 'Updated content',

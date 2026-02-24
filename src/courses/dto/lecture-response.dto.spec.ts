@@ -15,7 +15,7 @@ describe('LectureResponseDto', () => {
     return lecture;
   };
 
-  it('should map lecture entity to response dto', () => {
+  it('Lecture 엔티티를 응답 DTO로 매핑해야 한다', () => {
     const lecture = createMockLecture();
     const dto = LectureResponseDto.from(lecture);
 
@@ -29,7 +29,7 @@ describe('LectureResponseDto', () => {
     expect(dto.updatedAt).toEqual(new Date('2025-01-02'));
   });
 
-  it('should handle null videoUrl', () => {
+  it('null인 videoUrl을 처리해야 한다', () => {
     const lecture = createMockLecture();
     lecture.videoUrl = null;
 
@@ -37,7 +37,7 @@ describe('LectureResponseDto', () => {
     expect(dto.videoUrl).toBeNull();
   });
 
-  it('should map multiple lectures with fromMany', () => {
+  it('fromMany로 여러 강의를 매핑해야 한다', () => {
     const lectures = [createMockLecture(), createMockLecture()];
     lectures[1].id = 'lecture-uuid-2';
     lectures[1].order = 2;

@@ -36,7 +36,7 @@ describe('UsersService', () => {
   });
 
   describe('findByEmail', () => {
-    it('should return a user if found', async () => {
+    it('사용자를 찾으면 반환해야 한다', async () => {
       const user = { id: 'uuid-1', email: 'test@example.com' } as User;
       repository.findOne!.mockResolvedValue(user);
 
@@ -48,7 +48,7 @@ describe('UsersService', () => {
       });
     });
 
-    it('should return null if not found', async () => {
+    it('사용자를 찾지 못하면 null을 반환해야 한다', async () => {
       repository.findOne!.mockResolvedValue(null);
 
       const result = await service.findByEmail('notfound@example.com');
@@ -58,7 +58,7 @@ describe('UsersService', () => {
   });
 
   describe('findById', () => {
-    it('should return a user if found', async () => {
+    it('사용자를 찾으면 반환해야 한다', async () => {
       const user = { id: 'uuid-1', email: 'test@example.com' } as User;
       repository.findOne!.mockResolvedValue(user);
 
@@ -70,7 +70,7 @@ describe('UsersService', () => {
       });
     });
 
-    it('should throw NotFoundException if not found', async () => {
+    it('사용자를 찾지 못하면 NotFoundException을 던져야 한다', async () => {
       repository.findOne!.mockResolvedValue(null);
 
       await expect(service.findById('nonexistent')).rejects.toThrow(
@@ -80,7 +80,7 @@ describe('UsersService', () => {
   });
 
   describe('create', () => {
-    it('should create and return a new user', async () => {
+    it('새 사용자를 생성하고 반환해야 한다', async () => {
       const createData = {
         email: 'new@example.com',
         passwordHash: 'hashed',
@@ -103,7 +103,7 @@ describe('UsersService', () => {
       expect(repository.save).toHaveBeenCalledWith(user);
     });
 
-    it('should throw ConflictException if email already exists', async () => {
+    it('이메일이 이미 존재하면 ConflictException을 던져야 한다', async () => {
       const existing = { id: 'uuid-1', email: 'exists@example.com' } as User;
       repository.findOne!.mockResolvedValue(existing);
 
@@ -116,7 +116,7 @@ describe('UsersService', () => {
       ).rejects.toThrow(ConflictException);
     });
 
-    it('should throw ConflictException on unique constraint violation (race condition)', async () => {
+    it('유니크 제약 위반 시 ConflictException을 던져야 한다 (경쟁 조건)', async () => {
       repository.findOne!.mockResolvedValue(null);
       const user = { id: 'uuid-new', email: 'race@example.com' } as User;
       repository.create!.mockReturnValue(user);
@@ -142,7 +142,7 @@ describe('UsersService', () => {
   });
 
   describe('update', () => {
-    it('should update and return the user', async () => {
+    it('사용자를 업데이트하고 반환해야 한다', async () => {
       const user = {
         id: 'uuid-1',
         email: 'test@example.com',
@@ -159,7 +159,7 @@ describe('UsersService', () => {
       expect(repository.save).toHaveBeenCalled();
     });
 
-    it('should throw NotFoundException if user does not exist', async () => {
+    it('사용자가 존재하지 않으면 NotFoundException을 던져야 한다', async () => {
       repository.findOne!.mockResolvedValue(null);
 
       await expect(
@@ -169,7 +169,7 @@ describe('UsersService', () => {
   });
 
   describe('findAll', () => {
-    it('should return all users', async () => {
+    it('모든 사용자를 반환해야 한다', async () => {
       const users = [
         { id: 'uuid-1', email: 'a@example.com' },
         { id: 'uuid-2', email: 'b@example.com' },
@@ -184,7 +184,7 @@ describe('UsersService', () => {
   });
 
   describe('updateRefreshToken', () => {
-    it('should update refresh token', async () => {
+    it('리프레시 토큰을 업데이트해야 한다', async () => {
       const user = { id: 'uuid-1', refreshToken: null } as User;
       const updated = { ...user, refreshToken: 'new-token' } as User;
 
@@ -196,7 +196,7 @@ describe('UsersService', () => {
       expect(result.refreshToken).toBe('new-token');
     });
 
-    it('should set refresh token to null on logout', async () => {
+    it('로그아웃 시 리프레시 토큰을 null로 설정해야 한다', async () => {
       const user = { id: 'uuid-1', refreshToken: 'old-token' } as User;
       const updated = { ...user, refreshToken: null } as User;
 

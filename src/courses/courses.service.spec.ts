@@ -68,7 +68,7 @@ describe('CoursesService', () => {
   // --- Course CRUD ---
 
   describe('create', () => {
-    it('should create and return a course', async () => {
+    it('강좌를 생성하고 반환해야 한다', async () => {
       const dto: CreateCourseDto = {
         title: 'NestJS Fundamentals',
         description: 'Learn NestJS',
@@ -113,7 +113,7 @@ describe('CoursesService', () => {
       );
     });
 
-    it('should return paginated courses with defaults', async () => {
+    it('기본값으로 페이지네이션된 강좌를 반환해야 한다', async () => {
       const courses = [{ id: 'c1' }, { id: 'c2' }] as Course[];
       mockQueryBuilder.getManyAndCount!.mockResolvedValue([courses, 2]);
 
@@ -128,7 +128,7 @@ describe('CoursesService', () => {
       expect(mockQueryBuilder.take).toHaveBeenCalledWith(10);
     });
 
-    it('should filter by isPublished = true', async () => {
+    it('isPublished = true로 필터링해야 한다', async () => {
       mockQueryBuilder.getManyAndCount!.mockResolvedValue([[], 0]);
 
       await service.findAll({ page: 1, limit: 10 });
@@ -139,7 +139,7 @@ describe('CoursesService', () => {
       );
     });
 
-    it('should apply category filter', async () => {
+    it('category 필터를 적용해야 한다', async () => {
       mockQueryBuilder.getManyAndCount!.mockResolvedValue([[], 0]);
 
       const query: CourseQueryDto = {
@@ -155,7 +155,7 @@ describe('CoursesService', () => {
       );
     });
 
-    it('should apply difficulty filter', async () => {
+    it('difficulty 필터를 적용해야 한다', async () => {
       mockQueryBuilder.getManyAndCount!.mockResolvedValue([[], 0]);
 
       const query: CourseQueryDto = {
@@ -171,7 +171,7 @@ describe('CoursesService', () => {
       );
     });
 
-    it('should apply both category and difficulty filters', async () => {
+    it('category와 difficulty 필터를 모두 적용해야 한다', async () => {
       mockQueryBuilder.getManyAndCount!.mockResolvedValue([[], 0]);
 
       await service.findAll({
@@ -191,7 +191,7 @@ describe('CoursesService', () => {
       );
     });
 
-    it('should calculate correct skip for page 2', async () => {
+    it('페이지 2에 대해 올바른 skip을 계산해야 한다', async () => {
       mockQueryBuilder.getManyAndCount!.mockResolvedValue([[], 0]);
 
       await service.findAll({ page: 2, limit: 10 });
@@ -201,7 +201,7 @@ describe('CoursesService', () => {
   });
 
   describe('findById', () => {
-    it('should return published course with relations', async () => {
+    it('관계와 함께 공개된 강좌를 반환해야 한다', async () => {
       const course = {
         id: 'course-uuid',
         isPublished: true,
@@ -218,7 +218,7 @@ describe('CoursesService', () => {
       });
     });
 
-    it('should throw NotFoundException if not found', async () => {
+    it('찾을 수 없으면 NotFoundException을 던져야 한다', async () => {
       courseRepository.findOne!.mockResolvedValue(null);
 
       await expect(service.findById('nonexistent')).rejects.toThrow(
@@ -226,7 +226,7 @@ describe('CoursesService', () => {
       );
     });
 
-    it('should throw NotFoundException for unpublished course', async () => {
+    it('비공개 강좌에 대해 NotFoundException을 던져야 한다', async () => {
       courseRepository.findOne!.mockResolvedValue(null);
 
       await expect(service.findById('unpublished-uuid')).rejects.toThrow(
@@ -236,7 +236,7 @@ describe('CoursesService', () => {
   });
 
   describe('update', () => {
-    it('should update and return the course', async () => {
+    it('강좌를 수정하고 반환해야 한다', async () => {
       const course = {
         id: 'course-uuid',
         tutorId: 'tutor-uuid',
@@ -258,7 +258,7 @@ describe('CoursesService', () => {
       expect(result.title).toBe('New');
     });
 
-    it('should throw ForbiddenException if not owner', async () => {
+    it('소유자가 아니면 ForbiddenException을 던져야 한다', async () => {
       const course = { id: 'course-uuid', tutorId: 'other-tutor' } as Course;
       courseRepository.findOne!.mockResolvedValue(course);
 
@@ -269,7 +269,7 @@ describe('CoursesService', () => {
       ).rejects.toThrow(ForbiddenException);
     });
 
-    it('should allow ADMIN to update any course', async () => {
+    it('ADMIN은 모든 강좌를 수정할 수 있어야 한다', async () => {
       const course = {
         id: 'course-uuid',
         tutorId: 'other-tutor',
@@ -290,7 +290,7 @@ describe('CoursesService', () => {
       expect(result.title).toBe('Admin Updated');
     });
 
-    it('should throw NotFoundException if course not found', async () => {
+    it('강좌를 찾을 수 없으면 NotFoundException을 던져야 한다', async () => {
       courseRepository.findOne!.mockResolvedValue(null);
 
       await expect(
@@ -302,7 +302,7 @@ describe('CoursesService', () => {
   });
 
   describe('remove', () => {
-    it('should remove the course', async () => {
+    it('강좌를 삭제해야 한다', async () => {
       const course = { id: 'course-uuid', tutorId: 'tutor-uuid' } as Course;
       courseRepository.findOne!.mockResolvedValue(course);
       courseRepository.remove!.mockResolvedValue(course);
@@ -312,7 +312,7 @@ describe('CoursesService', () => {
       expect(courseRepository.remove).toHaveBeenCalledWith(course);
     });
 
-    it('should throw ForbiddenException if not owner', async () => {
+    it('소유자가 아니면 ForbiddenException을 던져야 한다', async () => {
       const course = { id: 'course-uuid', tutorId: 'other-tutor' } as Course;
       courseRepository.findOne!.mockResolvedValue(course);
 
@@ -321,7 +321,7 @@ describe('CoursesService', () => {
       ).rejects.toThrow(ForbiddenException);
     });
 
-    it('should allow ADMIN to remove any course', async () => {
+    it('ADMIN은 모든 강좌를 삭제할 수 있어야 한다', async () => {
       const course = { id: 'course-uuid', tutorId: 'other-tutor' } as Course;
       courseRepository.findOne!.mockResolvedValue(course);
       courseRepository.remove!.mockResolvedValue(course);
@@ -331,7 +331,7 @@ describe('CoursesService', () => {
       expect(courseRepository.remove).toHaveBeenCalledWith(course);
     });
 
-    it('should throw NotFoundException if course not found', async () => {
+    it('강좌를 찾을 수 없으면 NotFoundException을 던져야 한다', async () => {
       courseRepository.findOne!.mockResolvedValue(null);
 
       await expect(
@@ -343,7 +343,7 @@ describe('CoursesService', () => {
   // --- Lecture CRUD ---
 
   describe('createLecture', () => {
-    it('should create and return a lecture', async () => {
+    it('강의를 생성하고 반환해야 한다', async () => {
       const course = { id: 'course-uuid', tutorId: 'tutor-uuid' } as Course;
       const dto: CreateLectureDto = {
         title: 'Lecture 1',
@@ -374,7 +374,7 @@ describe('CoursesService', () => {
       });
     });
 
-    it('should throw ForbiddenException if not course owner', async () => {
+    it('강좌 소유자가 아니면 ForbiddenException을 던져야 한다', async () => {
       const course = { id: 'course-uuid', tutorId: 'other-tutor' } as Course;
       courseRepository.findOne!.mockResolvedValue(course);
 
@@ -387,7 +387,7 @@ describe('CoursesService', () => {
       ).rejects.toThrow(ForbiddenException);
     });
 
-    it('should throw ConflictException on duplicate order', async () => {
+    it('중복된 order에 대해 ConflictException을 던져야 한다', async () => {
       const course = { id: 'course-uuid', tutorId: 'tutor-uuid' } as Course;
       const lecture = { id: 'lecture-uuid' } as Lecture;
 
@@ -415,7 +415,7 @@ describe('CoursesService', () => {
   });
 
   describe('updateLecture', () => {
-    it('should update and return the lecture', async () => {
+    it('강의를 수정하고 반환해야 한다', async () => {
       const course = { id: 'course-uuid', tutorId: 'tutor-uuid' } as Course;
       const lecture = {
         id: 'lecture-uuid',
@@ -440,7 +440,7 @@ describe('CoursesService', () => {
       expect(result.title).toBe('New');
     });
 
-    it('should throw ForbiddenException if not course owner', async () => {
+    it('강좌 소유자가 아니면 ForbiddenException을 던져야 한다', async () => {
       const course = { id: 'course-uuid', tutorId: 'other-tutor' } as Course;
       courseRepository.findOne!.mockResolvedValue(course);
 
@@ -455,7 +455,7 @@ describe('CoursesService', () => {
       ).rejects.toThrow(ForbiddenException);
     });
 
-    it('should throw NotFoundException if lecture not found', async () => {
+    it('강의를 찾을 수 없으면 NotFoundException을 던져야 한다', async () => {
       const course = { id: 'course-uuid', tutorId: 'tutor-uuid' } as Course;
       courseRepository.findOne!.mockResolvedValue(course);
       lectureRepository.findOne!.mockResolvedValue(null);
@@ -473,7 +473,7 @@ describe('CoursesService', () => {
   });
 
   describe('removeLecture', () => {
-    it('should remove the lecture', async () => {
+    it('강의를 삭제해야 한다', async () => {
       const course = { id: 'course-uuid', tutorId: 'tutor-uuid' } as Course;
       const lecture = {
         id: 'lecture-uuid',
@@ -494,7 +494,7 @@ describe('CoursesService', () => {
       expect(lectureRepository.remove).toHaveBeenCalledWith(lecture);
     });
 
-    it('should throw ForbiddenException if not course owner', async () => {
+    it('강좌 소유자가 아니면 ForbiddenException을 던져야 한다', async () => {
       const course = { id: 'course-uuid', tutorId: 'other-tutor' } as Course;
       courseRepository.findOne!.mockResolvedValue(course);
 
@@ -508,7 +508,7 @@ describe('CoursesService', () => {
       ).rejects.toThrow(ForbiddenException);
     });
 
-    it('should throw NotFoundException if lecture not found', async () => {
+    it('강의를 찾을 수 없으면 NotFoundException을 던져야 한다', async () => {
       const course = { id: 'course-uuid', tutorId: 'tutor-uuid' } as Course;
       courseRepository.findOne!.mockResolvedValue(course);
       lectureRepository.findOne!.mockResolvedValue(null);

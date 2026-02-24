@@ -43,7 +43,7 @@ describe('UsersController', () => {
   };
 
   describe('GET /users', () => {
-    it('should return an array of UserResponseDto', async () => {
+    it('UserResponseDto 배열을 반환해야 한다', async () => {
       const users = [mockUser, { ...mockUser, id: 'uuid-2', name: 'User 2' }];
       usersService.findAll!.mockResolvedValue(users);
 
@@ -56,7 +56,7 @@ describe('UsersController', () => {
   });
 
   describe('GET /users/me', () => {
-    it('should return current user profile as UserResponseDto', async () => {
+    it('현재 사용자 프로필을 UserResponseDto로 반환해야 한다', async () => {
       usersService.findById!.mockResolvedValue(mockUser);
 
       const result = await controller.getMe(mockReqUser);
@@ -69,7 +69,7 @@ describe('UsersController', () => {
   });
 
   describe('GET /users/:id', () => {
-    it('should return a user by id as UserResponseDto', async () => {
+    it('ID로 사용자를 UserResponseDto로 반환해야 한다', async () => {
       usersService.findById!.mockResolvedValue(mockUser);
 
       const result = await controller.findOne('uuid-1');
@@ -79,7 +79,7 @@ describe('UsersController', () => {
       expect(usersService.findById).toHaveBeenCalledWith('uuid-1');
     });
 
-    it('should propagate NotFoundException from service', async () => {
+    it('서비스에서 발생한 NotFoundException을 전파해야 한다', async () => {
       usersService.findById!.mockRejectedValue(new NotFoundException());
 
       await expect(controller.findOne('nonexistent')).rejects.toThrow(
@@ -89,7 +89,7 @@ describe('UsersController', () => {
   });
 
   describe('PATCH /users/me', () => {
-    it('should update current user and return UserResponseDto', async () => {
+    it('현재 사용자를 업데이트하고 UserResponseDto를 반환해야 한다', async () => {
       const dto: UpdateUserDto = { name: 'Updated Name' };
       const updated = { ...mockUser, name: 'Updated Name' };
       usersService.update!.mockResolvedValue(updated);

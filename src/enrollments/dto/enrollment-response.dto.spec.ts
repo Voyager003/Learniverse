@@ -21,7 +21,7 @@ describe('EnrollmentResponseDto', () => {
   }
 
   describe('from()', () => {
-    it('should map enrollment entity to response dto', () => {
+    it('Enrollment 엔티티를 응답 DTO로 매핑해야 한다', () => {
       const enrollment = createMockEnrollment();
       const dto = EnrollmentResponseDto.from(enrollment);
 
@@ -34,7 +34,7 @@ describe('EnrollmentResponseDto', () => {
       expect(dto.updatedAt).toBe(mockDate);
     });
 
-    it('should include studentName when student relation is loaded', () => {
+    it('student 관계가 로드된 경우 studentName을 포함해야 한다', () => {
       const student = new User();
       student.name = 'John Doe';
       const enrollment = createMockEnrollment({ student });
@@ -44,7 +44,7 @@ describe('EnrollmentResponseDto', () => {
       expect(dto.studentName).toBe('John Doe');
     });
 
-    it('should leave studentName undefined when student relation is not loaded', () => {
+    it('student 관계가 로드되지 않은 경우 studentName을 undefined로 남겨야 한다', () => {
       const enrollment = createMockEnrollment();
 
       const dto = EnrollmentResponseDto.from(enrollment);
@@ -52,7 +52,7 @@ describe('EnrollmentResponseDto', () => {
       expect(dto.studentName).toBeUndefined();
     });
 
-    it('should include courseTitle when course relation is loaded', () => {
+    it('course 관계가 로드된 경우 courseTitle을 포함해야 한다', () => {
       const course = new Course();
       course.title = 'NestJS Fundamentals';
       const enrollment = createMockEnrollment({ course });
@@ -62,7 +62,7 @@ describe('EnrollmentResponseDto', () => {
       expect(dto.courseTitle).toBe('NestJS Fundamentals');
     });
 
-    it('should leave courseTitle undefined when course relation is not loaded', () => {
+    it('course 관계가 로드되지 않은 경우 courseTitle을 undefined로 남겨야 한다', () => {
       const enrollment = createMockEnrollment();
 
       const dto = EnrollmentResponseDto.from(enrollment);
@@ -72,7 +72,7 @@ describe('EnrollmentResponseDto', () => {
   });
 
   describe('fromMany()', () => {
-    it('should map an array of enrollments', () => {
+    it('수강 배열을 매핑해야 한다', () => {
       const enrollments = [
         createMockEnrollment({ id: 'e1' }),
         createMockEnrollment({
@@ -91,7 +91,7 @@ describe('EnrollmentResponseDto', () => {
       expect(dtos[1].progress).toBe(100);
     });
 
-    it('should return empty array for empty input', () => {
+    it('빈 입력에 대해 빈 배열을 반환해야 한다', () => {
       const dtos = EnrollmentResponseDto.fromMany([]);
       expect(dtos).toHaveLength(0);
     });

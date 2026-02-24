@@ -11,12 +11,12 @@ jest.mock('@nestjs/common', () => {
   };
 });
 
-describe('Roles Decorator', () => {
-  it('should export ROLES_KEY constant', () => {
+describe('Roles 데코레이터', () => {
+  it('ROLES_KEY 상수를 export해야 한다', () => {
     expect(ROLES_KEY).toBe('roles');
   });
 
-  it('should call SetMetadata with ROLES_KEY and provided roles', () => {
+  it('ROLES_KEY와 제공된 역할로 SetMetadata를 호출해야 한다', () => {
     Roles(Role.ADMIN, Role.TUTOR);
     expect(SetMetadata).toHaveBeenCalledWith('roles', [Role.ADMIN, Role.TUTOR]);
   });

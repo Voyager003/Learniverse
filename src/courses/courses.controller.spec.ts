@@ -87,7 +87,7 @@ describe('CoursesController', () => {
   // --- Course endpoints ---
 
   describe('POST /courses', () => {
-    it('should create and return a CourseResponseDto', async () => {
+    it('강좌를 생성하고 CourseResponseDto를 반환해야 한다', async () => {
       coursesService.create!.mockResolvedValue(mockCourse);
 
       const dto = {
@@ -107,7 +107,7 @@ describe('CoursesController', () => {
   });
 
   describe('GET /courses', () => {
-    it('should return paginated CourseResponseDto list', async () => {
+    it('페이지네이션된 CourseResponseDto 목록을 반환해야 한다', async () => {
       const paginated = new PaginatedResponseDto([mockCourse], 1, 1, 10);
       coursesService.findAll!.mockResolvedValue(paginated);
 
@@ -121,7 +121,7 @@ describe('CoursesController', () => {
   });
 
   describe('GET /courses/:id', () => {
-    it('should return a CourseResponseDto with lectures', async () => {
+    it('lectures와 함께 CourseResponseDto를 반환해야 한다', async () => {
       const courseWithLectures = { ...mockCourse, lectures: [mockLecture] };
       coursesService.findById!.mockResolvedValue(courseWithLectures);
 
@@ -133,7 +133,7 @@ describe('CoursesController', () => {
       expect(result.lectures![0]).toBeInstanceOf(LectureResponseDto);
     });
 
-    it('should propagate NotFoundException', async () => {
+    it('NotFoundException을 전파해야 한다', async () => {
       coursesService.findById!.mockRejectedValue(new NotFoundException());
 
       await expect(controller.findOne('nonexistent')).rejects.toThrow(
@@ -143,7 +143,7 @@ describe('CoursesController', () => {
   });
 
   describe('PATCH /courses/:id', () => {
-    it('should update and return CourseResponseDto', async () => {
+    it('강좌를 수정하고 CourseResponseDto를 반환해야 한다', async () => {
       const updated = { ...mockCourse, title: 'Updated' };
       coursesService.update!.mockResolvedValue(updated);
 
@@ -161,7 +161,7 @@ describe('CoursesController', () => {
       );
     });
 
-    it('should propagate ForbiddenException', async () => {
+    it('ForbiddenException을 전파해야 한다', async () => {
       coursesService.update!.mockRejectedValue(new ForbiddenException());
 
       await expect(
@@ -171,7 +171,7 @@ describe('CoursesController', () => {
   });
 
   describe('DELETE /courses/:id', () => {
-    it('should call remove and return nothing', async () => {
+    it('remove를 호출하고 아무것도 반환하지 않아야 한다', async () => {
       coursesService.remove!.mockResolvedValue(undefined);
 
       await controller.remove(mockReqTutor, 'course-uuid');
@@ -183,7 +183,7 @@ describe('CoursesController', () => {
       );
     });
 
-    it('should propagate ForbiddenException', async () => {
+    it('ForbiddenException을 전파해야 한다', async () => {
       coursesService.remove!.mockRejectedValue(new ForbiddenException());
 
       await expect(
@@ -195,7 +195,7 @@ describe('CoursesController', () => {
   // --- Lecture endpoints ---
 
   describe('POST /courses/:id/lectures', () => {
-    it('should create and return a LectureResponseDto', async () => {
+    it('강의를 생성하고 LectureResponseDto를 반환해야 한다', async () => {
       coursesService.createLecture!.mockResolvedValue(mockLecture);
 
       const dto = { title: 'Lecture 1', content: 'Content', order: 1 };
@@ -215,7 +215,7 @@ describe('CoursesController', () => {
       );
     });
 
-    it('should propagate ForbiddenException', async () => {
+    it('ForbiddenException을 전파해야 한다', async () => {
       coursesService.createLecture!.mockRejectedValue(new ForbiddenException());
 
       await expect(
@@ -229,7 +229,7 @@ describe('CoursesController', () => {
   });
 
   describe('PATCH /courses/:id/lectures/:lid', () => {
-    it('should update and return LectureResponseDto', async () => {
+    it('강의를 수정하고 LectureResponseDto를 반환해야 한다', async () => {
       const updated = { ...mockLecture, title: 'Updated' };
       coursesService.updateLecture!.mockResolvedValue(updated);
 
@@ -251,7 +251,7 @@ describe('CoursesController', () => {
       );
     });
 
-    it('should propagate ForbiddenException', async () => {
+    it('ForbiddenException을 전파해야 한다', async () => {
       coursesService.updateLecture!.mockRejectedValue(new ForbiddenException());
 
       await expect(
@@ -263,7 +263,7 @@ describe('CoursesController', () => {
   });
 
   describe('DELETE /courses/:id/lectures/:lid', () => {
-    it('should call removeLecture and return nothing', async () => {
+    it('removeLecture를 호출하고 아무것도 반환하지 않아야 한다', async () => {
       coursesService.removeLecture!.mockResolvedValue(undefined);
 
       await controller.removeLecture(
@@ -280,7 +280,7 @@ describe('CoursesController', () => {
       );
     });
 
-    it('should propagate ForbiddenException', async () => {
+    it('ForbiddenException을 전파해야 한다', async () => {
       coursesService.removeLecture!.mockRejectedValue(new ForbiddenException());
 
       await expect(

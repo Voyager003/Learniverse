@@ -3,15 +3,15 @@ import { User } from '../../users/entities/user.entity.js';
 import { Course } from '../../courses/entities/course.entity.js';
 import { EnrollmentStatus } from '../../common/enums/index.js';
 
-describe('Enrollment Entity', () => {
-  it('should create an enrollment with default values', () => {
+describe('Enrollment 엔티티', () => {
+  it('기본값으로 수강을 생성해야 한다', () => {
     const enrollment = new Enrollment();
 
     expect(enrollment.status).toBe(EnrollmentStatus.ACTIVE);
     expect(enrollment.progress).toBe(0);
   });
 
-  it('should create an enrollment with assigned values', () => {
+  it('지정된 값으로 수강을 생성해야 한다', () => {
     const enrollment = new Enrollment();
     enrollment.studentId = 'student-uuid';
     enrollment.courseId = 'course-uuid';
@@ -24,7 +24,7 @@ describe('Enrollment Entity', () => {
     expect(enrollment.progress).toBe(50);
   });
 
-  it('should allow setting student relation', () => {
+  it('student 관계를 설정할 수 있어야 한다', () => {
     const enrollment = new Enrollment();
     const student = new User();
     student.id = 'student-uuid';
@@ -36,7 +36,7 @@ describe('Enrollment Entity', () => {
     expect(enrollment.studentId).toBe('student-uuid');
   });
 
-  it('should allow setting course relation', () => {
+  it('course 관계를 설정할 수 있어야 한다', () => {
     const enrollment = new Enrollment();
     const course = new Course();
     course.id = 'course-uuid';
@@ -48,7 +48,7 @@ describe('Enrollment Entity', () => {
     expect(enrollment.courseId).toBe('course-uuid');
   });
 
-  it('should allow COMPLETED status', () => {
+  it('COMPLETED 상태를 허용해야 한다', () => {
     const enrollment = new Enrollment();
     enrollment.status = EnrollmentStatus.COMPLETED;
     enrollment.progress = 100;
@@ -57,7 +57,7 @@ describe('Enrollment Entity', () => {
     expect(enrollment.progress).toBe(100);
   });
 
-  it('should allow DROPPED status', () => {
+  it('DROPPED 상태를 허용해야 한다', () => {
     const enrollment = new Enrollment();
     enrollment.status = EnrollmentStatus.DROPPED;
 

@@ -62,7 +62,7 @@ describe('EnrollmentsController', () => {
   });
 
   describe('POST /enrollments', () => {
-    it('should enroll and return EnrollmentResponseDto', async () => {
+    it('수강 신청하고 EnrollmentResponseDto를 반환해야 한다', async () => {
       enrollmentsService.enroll!.mockResolvedValue(mockEnrollment);
 
       const dto = { courseId: 'course-uuid' };
@@ -77,7 +77,7 @@ describe('EnrollmentsController', () => {
       );
     });
 
-    it('should propagate ConflictException', async () => {
+    it('ConflictException을 전파해야 한다', async () => {
       enrollmentsService.enroll!.mockRejectedValue(new ConflictException());
 
       await expect(
@@ -85,7 +85,7 @@ describe('EnrollmentsController', () => {
       ).rejects.toThrow(ConflictException);
     });
 
-    it('should propagate NotFoundException', async () => {
+    it('NotFoundException을 전파해야 한다', async () => {
       enrollmentsService.enroll!.mockRejectedValue(new NotFoundException());
 
       await expect(
@@ -93,7 +93,7 @@ describe('EnrollmentsController', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('should propagate BadRequestException for self-enrollment', async () => {
+    it('자기 수강 신청에 대해 BadRequestException을 전파해야 한다', async () => {
       enrollmentsService.enroll!.mockRejectedValue(new BadRequestException());
 
       await expect(
@@ -103,7 +103,7 @@ describe('EnrollmentsController', () => {
   });
 
   describe('GET /enrollments/my', () => {
-    it('should return paginated EnrollmentResponseDto list', async () => {
+    it('페이지네이션된 EnrollmentResponseDto 목록을 반환해야 한다', async () => {
       const paginated = new PaginatedResponseDto([mockEnrollment], 1, 1, 10);
       enrollmentsService.findMyEnrollments!.mockResolvedValue(paginated);
 
@@ -118,7 +118,7 @@ describe('EnrollmentsController', () => {
       );
     });
 
-    it('should return empty result if no enrollments', async () => {
+    it('수강이 없으면 빈 결과를 반환해야 한다', async () => {
       const paginated = new PaginatedResponseDto([], 0, 1, 10);
       enrollmentsService.findMyEnrollments!.mockResolvedValue(paginated);
 
@@ -133,7 +133,7 @@ describe('EnrollmentsController', () => {
   });
 
   describe('PATCH /enrollments/:id/progress', () => {
-    it('should update progress and return EnrollmentResponseDto', async () => {
+    it('진행률을 업데이트하고 EnrollmentResponseDto를 반환해야 한다', async () => {
       const updated = { ...mockEnrollment, progress: 50 };
       enrollmentsService.updateProgress!.mockResolvedValue(updated);
 
@@ -153,7 +153,7 @@ describe('EnrollmentsController', () => {
       );
     });
 
-    it('should propagate NotFoundException', async () => {
+    it('NotFoundException을 전파해야 한다', async () => {
       enrollmentsService.updateProgress!.mockRejectedValue(
         new NotFoundException(),
       );
@@ -165,7 +165,7 @@ describe('EnrollmentsController', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('should propagate BadRequestException for non-active enrollment', async () => {
+    it('비활성 수강에 대해 BadRequestException을 전파해야 한다', async () => {
       enrollmentsService.updateProgress!.mockRejectedValue(
         new BadRequestException(),
       );

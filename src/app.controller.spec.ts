@@ -15,7 +15,7 @@ describe('AppController', () => {
   });
 
   describe('getHealth', () => {
-    it('should return status ok', () => {
+    it('상태 ok를 반환해야 한다', () => {
       expect(appController.getHealth()).toEqual({ status: 'ok' });
     });
   });

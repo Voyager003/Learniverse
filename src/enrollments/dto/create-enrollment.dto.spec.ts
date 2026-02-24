@@ -7,19 +7,19 @@ describe('CreateEnrollmentDto', () => {
     courseId: '550e8400-e29b-41d4-a716-446655440000',
   };
 
-  it('should pass with valid UUID courseId', async () => {
+  it('유효한 UUID courseId로 검증을 통과해야 한다', async () => {
     const dto = plainToInstance(CreateEnrollmentDto, validInput);
     const errors = await validate(dto);
     expect(errors.length).toBe(0);
   });
 
-  it('should fail without courseId', async () => {
+  it('courseId 없이 검증에 실패해야 한다', async () => {
     const dto = plainToInstance(CreateEnrollmentDto, {});
     const errors = await validate(dto);
     expect(errors.length).toBeGreaterThan(0);
   });
 
-  it('should fail with non-UUID courseId', async () => {
+  it('UUID가 아닌 courseId로 검증에 실패해야 한다', async () => {
     const dto = plainToInstance(CreateEnrollmentDto, {
       courseId: 'not-a-uuid',
     });
@@ -27,7 +27,7 @@ describe('CreateEnrollmentDto', () => {
     expect(errors.length).toBeGreaterThan(0);
   });
 
-  it('should fail with empty string courseId', async () => {
+  it('빈 문자열 courseId로 검증에 실패해야 한다', async () => {
     const dto = plainToInstance(CreateEnrollmentDto, {
       courseId: '',
     });

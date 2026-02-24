@@ -11,13 +11,13 @@ describe('CreateCourseDto', () => {
     difficulty: CourseDifficulty.BEGINNER,
   };
 
-  it('should pass with valid input', async () => {
+  it('유효한 입력으로 검증을 통과해야 한다', async () => {
     const dto = plainToInstance(CreateCourseDto, validInput);
     const errors = await validate(dto);
     expect(errors.length).toBe(0);
   });
 
-  it('should fail without title', async () => {
+  it('title 없이 검증에 실패해야 한다', async () => {
     const dto = plainToInstance(CreateCourseDto, {
       description: validInput.description,
       category: validInput.category,
@@ -27,7 +27,7 @@ describe('CreateCourseDto', () => {
     expect(errors.length).toBeGreaterThan(0);
   });
 
-  it('should fail without description', async () => {
+  it('description 없이 검증에 실패해야 한다', async () => {
     const dto = plainToInstance(CreateCourseDto, {
       title: validInput.title,
       category: validInput.category,
@@ -37,7 +37,7 @@ describe('CreateCourseDto', () => {
     expect(errors.length).toBeGreaterThan(0);
   });
 
-  it('should fail with invalid category', async () => {
+  it('유효하지 않은 category로 검증에 실패해야 한다', async () => {
     const dto = plainToInstance(CreateCourseDto, {
       ...validInput,
       category: 'invalid',
@@ -46,7 +46,7 @@ describe('CreateCourseDto', () => {
     expect(errors.length).toBeGreaterThan(0);
   });
 
-  it('should fail with invalid difficulty', async () => {
+  it('유효하지 않은 difficulty로 검증에 실패해야 한다', async () => {
     const dto = plainToInstance(CreateCourseDto, {
       ...validInput,
       difficulty: 'invalid',
@@ -55,7 +55,7 @@ describe('CreateCourseDto', () => {
     expect(errors.length).toBeGreaterThan(0);
   });
 
-  it('should fail with title exceeding 200 characters', async () => {
+  it('title이 200자를 초과하면 검증에 실패해야 한다', async () => {
     const dto = plainToInstance(CreateCourseDto, {
       ...validInput,
       title: 'a'.repeat(201),
