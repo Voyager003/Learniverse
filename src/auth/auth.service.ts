@@ -15,6 +15,8 @@ import { ERROR_MESSAGES } from '../common/constants/error-messages.constant.js';
 
 @Injectable()
 export class AuthService {
+  private readonly SALT_ROUNDS = 10;
+
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
@@ -27,7 +29,7 @@ export class AuthService {
       throw new ConflictException(ERROR_MESSAGES.EMAIL_ALREADY_EXISTS);
     }
 
-    const passwordHash = await bcrypt.hash(dto.password, 10);
+    const passwordHash = await bcrypt.hash(dto.password, this.SALT_ROUNDS);
     const user = await this.usersService.create({
       email: dto.email,
       passwordHash,
@@ -111,7 +113,7 @@ export class AuthService {
     userId: string,
     refreshToken: string,
   ): Promise<void> {
-    const hashedToken = await bcrypt.hash(refreshToken, 10);
+    const hashedToken = await bcrypt.hash(refreshToken, this.SALT_ROUNDS);
     await this.usersService.updateRefreshToken(userId, hashedToken);
   }
 }
