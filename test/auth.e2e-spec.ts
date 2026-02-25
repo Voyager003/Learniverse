@@ -1,14 +1,12 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
-import { DataSource } from 'typeorm';
-import { Connection } from 'mongoose';
-import { getConnectionToken } from '@nestjs/mongoose';
-import { AppModule } from '../src/app.module';
-import { HttpExceptionFilter } from '../src/common/filters/http-exception.filter';
-import { TransformInterceptor } from '../src/common/interceptors/transform.interceptor';
+import { INestApplication } from '@nestjs/common';
 import { ERROR_MESSAGES } from '../src/common/constants/error-messages.constant';
+import {
+  createTestApp,
+  teardownTestApp,
+  TestContext,
+} from './helpers/create-app';
 
 // Type-safe response interfaces for supertest body assertions
 interface SuccessBody<T> {
@@ -30,44 +28,15 @@ interface AuthTokens {
 
 describe('Auth (e2e)', () => {
   let app: INestApplication<App>;
-  let dataSource: DataSource;
-  let mongoConnection: Connection;
+  let ctx: TestContext;
 
   beforeAll(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-
-    // Mirror main.ts global configuration
-    app.setGlobalPrefix('api/v1');
-    app.useGlobalPipes(
-      new ValidationPipe({
-        whitelist: true,
-        forbidNonWhitelisted: true,
-        transform: true,
-      }),
-    );
-    app.useGlobalFilters(new HttpExceptionFilter());
-    app.useGlobalInterceptors(new TransformInterceptor());
-
-    await app.init();
-
-    dataSource = moduleFixture.get(DataSource);
-    mongoConnection = moduleFixture.get<Connection>(getConnectionToken());
+    ctx = await createTestApp();
+    app = ctx.app as INestApplication<App>;
   });
 
   afterAll(async () => {
-    // Clean up test databases
-    if (dataSource?.isInitialized) {
-      await dataSource.dropDatabase();
-      await dataSource.destroy();
-    }
-    if (mongoConnection) {
-      await mongoConnection.dropDatabase();
-    }
-    await app.close();
+    await teardownTestApp(ctx);
   });
 
   // --- Register ---
