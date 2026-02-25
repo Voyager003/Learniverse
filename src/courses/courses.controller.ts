@@ -13,6 +13,12 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { CoursesService } from './courses.service.js';
 import { CreateCourseDto } from './dto/create-course.dto.js';
 import { UpdateCourseDto } from './dto/update-course.dto.js';
@@ -28,6 +34,7 @@ import { RolesGuard } from '../common/guards/roles.guard.js';
 import { Role } from '../common/enums/index.js';
 import { RequestUser } from '../auth/interfaces/request-user.interface.js';
 
+@ApiTags('Courses')
 @Controller('courses')
 export class CoursesController {
   constructor(private readonly coursesService: CoursesService) {}
@@ -37,6 +44,14 @@ export class CoursesController {
   @Post()
   @UseGuards(RolesGuard)
   @Roles(Role.TUTOR, Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '강좌 생성 (TUTOR, ADMIN)' })
+  @ApiResponse({
+    status: 201,
+    description: '생성 성공',
+    type: CourseResponseDto,
+  })
+  @ApiResponse({ status: 403, description: '권한 부족' })
   async create(
     @Req() req: { user: RequestUser },
     @Body() dto: CreateCourseDto,
@@ -47,6 +62,8 @@ export class CoursesController {
 
   @Get()
   @Public()
+  @ApiOperation({ summary: '강좌 목록 조회 (공개)' })
+  @ApiResponse({ status: 200, description: '강좌 목록 (페이지네이션)' })
   async findAll(
     @Query() query: CourseQueryDto,
   ): Promise<PaginatedResponseDto<CourseResponseDto>> {
@@ -61,6 +78,13 @@ export class CoursesController {
 
   @Get(':id')
   @Public()
+  @ApiOperation({ summary: '강좌 상세 조회 (공개)' })
+  @ApiResponse({
+    status: 200,
+    description: '강좌 정보',
+    type: CourseResponseDto,
+  })
+  @ApiResponse({ status: 404, description: '강좌 없음' })
   async findOne(
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<CourseResponseDto> {
@@ -71,6 +95,15 @@ export class CoursesController {
   @Patch(':id')
   @UseGuards(RolesGuard)
   @Roles(Role.TUTOR, Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '강좌 수정 (TUTOR, ADMIN)' })
+  @ApiResponse({
+    status: 200,
+    description: '수정 성공',
+    type: CourseResponseDto,
+  })
+  @ApiResponse({ status: 403, description: '권한 부족' })
+  @ApiResponse({ status: 404, description: '강좌 없음' })
   async update(
     @Req() req: { user: RequestUser },
     @Param('id', ParseUUIDPipe) id: string,
@@ -89,6 +122,11 @@ export class CoursesController {
   @UseGuards(RolesGuard)
   @Roles(Role.TUTOR, Role.ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '강좌 삭제 (TUTOR, ADMIN)' })
+  @ApiResponse({ status: 204, description: '삭제 성공' })
+  @ApiResponse({ status: 403, description: '권한 부족' })
+  @ApiResponse({ status: 404, description: '강좌 없음' })
   async remove(
     @Req() req: { user: RequestUser },
     @Param('id', ParseUUIDPipe) id: string,
@@ -101,6 +139,15 @@ export class CoursesController {
   @Post(':id/lectures')
   @UseGuards(RolesGuard)
   @Roles(Role.TUTOR, Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '강의 생성 (TUTOR, ADMIN)' })
+  @ApiResponse({
+    status: 201,
+    description: '생성 성공',
+    type: LectureResponseDto,
+  })
+  @ApiResponse({ status: 403, description: '권한 부족' })
+  @ApiResponse({ status: 404, description: '강좌 없음' })
   async createLecture(
     @Req() req: { user: RequestUser },
     @Param('id', ParseUUIDPipe) id: string,
@@ -118,6 +165,15 @@ export class CoursesController {
   @Patch(':id/lectures/:lid')
   @UseGuards(RolesGuard)
   @Roles(Role.TUTOR, Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '강의 수정 (TUTOR, ADMIN)' })
+  @ApiResponse({
+    status: 200,
+    description: '수정 성공',
+    type: LectureResponseDto,
+  })
+  @ApiResponse({ status: 403, description: '권한 부족' })
+  @ApiResponse({ status: 404, description: '강좌 또는 강의 없음' })
   async updateLecture(
     @Req() req: { user: RequestUser },
     @Param('id', ParseUUIDPipe) id: string,
@@ -138,6 +194,11 @@ export class CoursesController {
   @UseGuards(RolesGuard)
   @Roles(Role.TUTOR, Role.ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '강의 삭제 (TUTOR, ADMIN)' })
+  @ApiResponse({ status: 204, description: '삭제 성공' })
+  @ApiResponse({ status: 403, description: '권한 부족' })
+  @ApiResponse({ status: 404, description: '강좌 또는 강의 없음' })
   async removeLecture(
     @Req() req: { user: RequestUser },
     @Param('id', ParseUUIDPipe) id: string,
