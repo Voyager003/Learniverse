@@ -13,6 +13,7 @@ import { Connection } from 'mongoose';
 import { getConnectionToken } from '@nestjs/mongoose';
 import { AppModule } from '../../src/app.module';
 import { HttpExceptionFilter } from '../../src/common/filters/http-exception.filter';
+import { LoggingInterceptor } from '../../src/common/interceptors/logging.interceptor';
 import { TransformInterceptor } from '../../src/common/interceptors/transform.interceptor';
 
 export interface TestContext {
@@ -56,7 +57,10 @@ export async function createTestApp(): Promise<TestContext> {
     }),
   );
   app.useGlobalFilters(new HttpExceptionFilter());
-  app.useGlobalInterceptors(new TransformInterceptor());
+  app.useGlobalInterceptors(
+    new LoggingInterceptor(),
+    new TransformInterceptor(),
+  );
 
   await app.init();
 

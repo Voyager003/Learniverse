@@ -3,30 +3,18 @@ import { App } from 'supertest/types';
 import { INestApplication } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { ERROR_MESSAGES } from '../src/common/constants/error-messages.constant';
-import { Role } from '../src/common/enums';
 import {
   createTestApp,
   teardownTestApp,
   TestContext,
 } from './helpers/create-app';
-
-// Type-safe response interfaces
-interface SuccessBody<T> {
-  data: T;
-  statusCode: number;
-}
-
-interface ErrorBody {
-  statusCode: number;
-  message: string | string[];
-  error: string;
-  timestamp: string;
-}
-
-interface AuthTokens {
-  accessToken: string;
-  refreshToken: string;
-}
+import { promoteToTutor } from './helpers/seed-helpers';
+import {
+  SuccessBody,
+  ErrorBody,
+  AuthTokens,
+  PaginatedData,
+} from './helpers/test-interfaces';
 
 interface EnrollmentData {
   id: string;
@@ -36,13 +24,6 @@ interface EnrollmentData {
   progress: number;
   createdAt: string;
   updatedAt: string;
-}
-
-interface PaginatedData<T> {
-  data: T[];
-  total: number;
-  page: number;
-  limit: number;
 }
 
 interface CourseData {
@@ -77,10 +58,7 @@ describe('Enrollments (e2e)', () => {
       name: 'Enroll Tutor',
     });
 
-    await dataSource.query(`UPDATE users SET role = $1 WHERE email = $2`, [
-      Role.TUTOR,
-      'enroll-tutor@test.com',
-    ]);
+    await promoteToTutor(dataSource, 'enroll-tutor@test.com');
 
     const tutorLogin = await request(app.getHttpServer())
       .post('/api/v1/auth/login')

@@ -7,24 +7,7 @@ import {
   teardownTestApp,
   TestContext,
 } from './helpers/create-app';
-
-// Type-safe response interfaces for supertest body assertions
-interface SuccessBody<T> {
-  data: T;
-  statusCode: number;
-}
-
-interface ErrorBody {
-  statusCode: number;
-  message: string | string[];
-  error: string;
-  timestamp: string;
-}
-
-interface AuthTokens {
-  accessToken: string;
-  refreshToken: string;
-}
+import { SuccessBody, ErrorBody, AuthTokens } from './helpers/test-interfaces';
 
 describe('Auth (e2e)', () => {
   let app: INestApplication<App>;

@@ -3,30 +3,13 @@ import { App } from 'supertest/types';
 import { INestApplication } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { ERROR_MESSAGES } from '../src/common/constants/error-messages.constant';
-import { Role } from '../src/common/enums';
 import {
   createTestApp,
   teardownTestApp,
   TestContext,
 } from './helpers/create-app';
-
-// Type-safe response interfaces
-interface SuccessBody<T> {
-  data: T;
-  statusCode: number;
-}
-
-interface ErrorBody {
-  statusCode: number;
-  message: string | string[];
-  error: string;
-  timestamp: string;
-}
-
-interface AuthTokens {
-  accessToken: string;
-  refreshToken: string;
-}
+import { promoteToTutor } from './helpers/seed-helpers';
+import { SuccessBody, ErrorBody, AuthTokens } from './helpers/test-interfaces';
 
 interface CourseData {
   id: string;
@@ -84,10 +67,7 @@ describe('Assignments & Submissions (e2e)', () => {
       password: 'password123',
       name: 'Assign Tutor',
     });
-    await dataSource.query(`UPDATE users SET role = $1 WHERE email = $2`, [
-      Role.TUTOR,
-      'assign-tutor@test.com',
-    ]);
+    await promoteToTutor(dataSource, 'assign-tutor@test.com');
     const tutorLogin = await request(app.getHttpServer())
       .post('/api/v1/auth/login')
       .send({ email: 'assign-tutor@test.com', password: 'password123' });
@@ -99,10 +79,7 @@ describe('Assignments & Submissions (e2e)', () => {
       password: 'password123',
       name: 'Other Tutor',
     });
-    await dataSource.query(`UPDATE users SET role = $1 WHERE email = $2`, [
-      Role.TUTOR,
-      'assign-other-tutor@test.com',
-    ]);
+    await promoteToTutor(dataSource, 'assign-other-tutor@test.com');
     const otherTutorLogin = await request(app.getHttpServer())
       .post('/api/v1/auth/login')
       .send({ email: 'assign-other-tutor@test.com', password: 'password123' });
