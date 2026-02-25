@@ -19,7 +19,7 @@
 | 입력 검증 | class-validator + class-transformer |
 | 설정 관리 | @nestjs/config + Joi |
 | API 문서 | Swagger |
-| 테스트 | Jest + Supertest |
+| 테스트 | Jest 30 + Supertest + Testcontainers |
 
 ## 구현 기능
 
@@ -52,7 +52,9 @@
 - [x] 글로벌 예외 필터 (일관된 에러 응답)
 - [x] 응답 래핑 인터셉터
 - [x] 환경변수 검증 (Joi)
-- [x] Swagger API 문서 자동화
+- [x] Swagger API 문서 자동화 (전 라우트)
+- [x] DB 인덱스 최적화 (assignments, submissions)
+- [x] E2E 테스트 (Testcontainers — PostgreSQL 16, MongoDB 7)
 
 ## API 엔드포인트
 
@@ -106,9 +108,12 @@
 ### PostgreSQL
 - **users** — 사용자 (email, role, refresh_token)
 - **courses** — 강의 (title, category, difficulty, tutor FK)
-- **lectures** — 레슨 (course FK, order, content)
-- **enrollments** — 수강 (student + course UNIQUE, progress)
+- **lectures** — 레슨 (course FK, order UNIQUE per course, content)
+- **enrollments** — 수강 (student + course UNIQUE, status, progress)
 - **assignments** — 과제 (course FK, due_date)
+
+### MongoDB
+- **submissions** — 제출물 (studentId, assignmentId, content, fileUrls, status, feedback, score)
 
 ## 설치 및 실행
 

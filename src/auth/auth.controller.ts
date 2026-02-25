@@ -8,6 +8,12 @@ import {
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { AuthService } from './auth.service.js';
 import { RegisterDto } from './dto/register.dto.js';
 import { LoginDto } from './dto/login.dto.js';
@@ -17,12 +23,16 @@ import { JwtRefreshGuard } from '../common/guards/jwt-refresh.guard.js';
 import { RequestUser } from './interfaces/request-user.interface.js';
 import { ERROR_MESSAGES } from '../common/constants/error-messages.constant.js';
 
+@ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Public()
   @Post('register')
+  @ApiOperation({ summary: '회원가입' })
+  @ApiResponse({ status: 201, description: '가입 성공', type: AuthResponseDto })
+  @ApiResponse({ status: 409, description: '이메일 중복' })
   register(@Body() dto: RegisterDto): Promise<AuthResponseDto> {
     return this.authService.register(dto);
   }
@@ -30,6 +40,13 @@ export class AuthController {
   @Public()
   @Post('login')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '로그인' })
+  @ApiResponse({
+    status: 200,
+    description: '로그인 성공',
+    type: AuthResponseDto,
+  })
+  @ApiResponse({ status: 401, description: '인증 실패' })
   login(@Body() dto: LoginDto): Promise<AuthResponseDto> {
     return this.authService.login(dto);
   }
@@ -38,6 +55,10 @@ export class AuthController {
   @UseGuards(JwtRefreshGuard)
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '토큰 갱신' })
+  @ApiResponse({ status: 200, description: '갱신 성공', type: AuthResponseDto })
+  @ApiResponse({ status: 401, description: '유효하지 않은 리프레시 토큰' })
   refresh(
     @Req()
     req: {
@@ -56,6 +77,10 @@ export class AuthController {
 
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '로그아웃' })
+  @ApiResponse({ status: 204, description: '로그아웃 성공' })
+  @ApiResponse({ status: 401, description: '미인증' })
   logout(@Req() req: { user: RequestUser }): Promise<void> {
     return this.authService.logout(req.user.userId);
   }

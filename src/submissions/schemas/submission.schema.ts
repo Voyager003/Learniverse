@@ -43,3 +43,6 @@ export const SubmissionSchema = SchemaFactory.createForClass(Submission);
 
 // Unique index for duplicate submission prevention (race condition safety)
 SubmissionSchema.index({ studentId: 1, assignmentId: 1 }, { unique: true });
+
+// Query index for findByAssignment
+SubmissionSchema.index({ assignmentId: 1 });

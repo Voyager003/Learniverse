@@ -10,6 +10,12 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { EnrollmentsService } from './enrollments.service.js';
 import { CreateEnrollmentDto } from './dto/create-enrollment.dto.js';
 import { UpdateProgressDto } from './dto/update-progress.dto.js';
@@ -21,6 +27,8 @@ import { RolesGuard } from '../common/guards/roles.guard.js';
 import { Role } from '../common/enums/index.js';
 import { RequestUser } from '../auth/interfaces/request-user.interface.js';
 
+@ApiTags('Enrollments')
+@ApiBearerAuth()
 @Controller('enrollments')
 export class EnrollmentsController {
   constructor(private readonly enrollmentsService: EnrollmentsService) {}
@@ -28,6 +36,13 @@ export class EnrollmentsController {
   @Post()
   @UseGuards(RolesGuard)
   @Roles(Role.STUDENT)
+  @ApiOperation({ summary: '수강 등록 (STUDENT)' })
+  @ApiResponse({
+    status: 201,
+    description: '등록 성공',
+    type: EnrollmentResponseDto,
+  })
+  @ApiResponse({ status: 409, description: '이미 수강 중' })
   async enroll(
     @Req() req: { user: RequestUser },
     @Body() dto: CreateEnrollmentDto,
@@ -40,6 +55,8 @@ export class EnrollmentsController {
   }
 
   @Get('my')
+  @ApiOperation({ summary: '내 수강 목록 조회' })
+  @ApiResponse({ status: 200, description: '수강 목록 (페이지네이션)' })
   async findMyEnrollments(
     @Req() req: { user: RequestUser },
     @Query() query: PaginationQueryDto,
@@ -59,6 +76,13 @@ export class EnrollmentsController {
   @Patch(':id/progress')
   @UseGuards(RolesGuard)
   @Roles(Role.STUDENT)
+  @ApiOperation({ summary: '진행률 업데이트 (STUDENT)' })
+  @ApiResponse({
+    status: 200,
+    description: '업데이트 성공',
+    type: EnrollmentResponseDto,
+  })
+  @ApiResponse({ status: 404, description: '수강 정보 없음' })
   async updateProgress(
     @Req() req: { user: RequestUser },
     @Param('id', ParseUUIDPipe) id: string,

@@ -1,3 +1,4 @@
+import { getMetadataArgsStorage } from 'typeorm';
 import { Assignment } from './assignment.entity.js';
 import { Course } from '../../courses/entities/course.entity.js';
 
@@ -42,5 +43,16 @@ describe('Assignment 엔티티', () => {
     assignment.dueDate = null;
 
     expect(assignment.dueDate).toBeNull();
+  });
+
+  it('course_id 컬럼에 인덱스가 설정되어야 한다', () => {
+    const indices = getMetadataArgsStorage().indices.filter(
+      (index) => index.target === Assignment,
+    );
+    const courseIdIndex = indices.find(
+      (index) =>
+        Array.isArray(index.columns) && index.columns.includes('courseId'),
+    );
+    expect(courseIdIndex).toBeDefined();
   });
 });

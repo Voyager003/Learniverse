@@ -6,6 +6,7 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { Course } from '../../courses/entities/course.entity.js';
 
@@ -24,6 +25,7 @@ export class Assignment {
   @JoinColumn({ name: 'course_id' })
   course: Course;
 
+  @Index()
   @Column({ name: 'course_id' })
   courseId: string;
 
