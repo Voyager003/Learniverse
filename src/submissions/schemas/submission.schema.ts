@@ -33,6 +33,10 @@ export class Submission {
 
   @Prop({ type: Date, default: null })
   reviewedAt: Date | null = null;
+
+  // timestamps: true generates these at runtime
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export const SubmissionSchema = SchemaFactory.createForClass(Submission);

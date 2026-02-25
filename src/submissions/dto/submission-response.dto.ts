@@ -1,19 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { SubmissionStatus } from '../../common/enums/index.js';
-
-interface SubmissionDoc {
-  _id: { toString(): string };
-  studentId: string;
-  assignmentId: string;
-  content: string;
-  fileUrls: string[];
-  status: SubmissionStatus;
-  feedback: string | null;
-  score: number | null;
-  reviewedAt: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
+import { SubmissionDocument } from '../schemas/submission.schema.js';
 
 export class SubmissionResponseDto {
   @ApiProperty()
@@ -49,7 +36,7 @@ export class SubmissionResponseDto {
   @ApiProperty()
   updatedAt: Date;
 
-  static from(doc: SubmissionDoc): SubmissionResponseDto {
+  static from(doc: SubmissionDocument): SubmissionResponseDto {
     const dto = new SubmissionResponseDto();
     dto.id = doc._id.toString();
     dto.studentId = doc.studentId;
@@ -65,7 +52,7 @@ export class SubmissionResponseDto {
     return dto;
   }
 
-  static fromMany(docs: SubmissionDoc[]): SubmissionResponseDto[] {
+  static fromMany(docs: SubmissionDocument[]): SubmissionResponseDto[] {
     return docs.map((doc) => SubmissionResponseDto.from(doc));
   }
 }
