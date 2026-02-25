@@ -226,20 +226,22 @@ if (isExpectedType(data)) {
 - **5-8**: Assignments + Submissions 모듈 통합
 - **5-9**: 코드 리뷰 + 수정
 
-### Phase 6 — Stability & Quality
-> Showcase: "수강생이 몰려도 안정적" — E2E 테스트, Rate Limiting, 인덱스, Swagger
+### Phase 6 — Stability & Quality ✅
+> Showcase: E2E 테스트 (Testcontainers), DB 인덱스, Swagger 문서화
 
 - **6-1**: DB 인덱스 최적화
-  - courses(category, tutor_id), enrollments(student_id), assignments(course_id)
-  - MongoDB: submissions(studentId+assignmentId, assignmentId)
-- **6-2**: Rate Limiting (@nestjs/throttler)
-  - 전역 60req/min, 인증 엔드포인트 5req/min
+  - assignments(course_id)
+  - MongoDB: submissions(studentId+assignmentId UNIQUE, assignmentId)
+- **6-2**: ~~Rate Limiting~~ (현 도메인 규모에서 불필요하여 보류)
 - **6-3**: Swagger API 문서 완성
   - 전 라우트 @ApiTags, @ApiOperation, @ApiResponse, @ApiBearerAuth
-- **6-4**: E2E 테스트 셋업 + Auth 플로우
-- **6-5**: Courses & Lectures E2E 테스트
-- **6-6**: Enrollments E2E 테스트
-- **6-7**: Assignments & Submissions E2E 테스트
+- **6-4**: E2E 테스트 인프라 + Auth 플로우
+  - Testcontainers (PostgreSQL 16, MongoDB 7) 기반 격리 환경
+  - test/helpers: createTestApp, teardownTestApp, 공통 인터페이스, seed 헬퍼
+- **6-5**: Courses & Lectures E2E 테스트 (26 tests)
+- **6-6**: Enrollments E2E 테스트 (21 tests)
+- **6-7**: Assignments & Submissions E2E 테스트 (32 tests)
+- 단위 테스트: 49 suites, 319 tests / E2E 테스트: 5 suites, 96 tests
 
 ## Commands
 
