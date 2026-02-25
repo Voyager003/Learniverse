@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ForbiddenException,
   ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -13,6 +14,10 @@ import { CreateSubmissionDto } from './dto/create-submission.dto.js';
 import { AddFeedbackDto } from './dto/add-feedback.dto.js';
 import { SubmissionStatus, Role } from '../common/enums/index.js';
 import { ERROR_MESSAGES } from '../common/constants/error-messages.constant.js';
+
+interface MongoError extends Error {
+  code?: number;
+}
 
 @Injectable()
 export class SubmissionsService {
@@ -31,6 +36,11 @@ export class SubmissionsService {
     // Verify assignment exists and get course info
     const assignment = await this.assignmentsService.findOne(assignmentId);
 
+    // H-2: Check submission deadline
+    if (assignment.dueDate && new Date() > assignment.dueDate) {
+      throw new BadRequestException(ERROR_MESSAGES.SUBMISSION_DEADLINE_PASSED);
+    }
+
     // Verify student is enrolled
     const enrolled = await this.enrollmentsService.isEnrolled(
       studentId,
@@ -40,21 +50,30 @@ export class SubmissionsService {
       throw new ForbiddenException(ERROR_MESSAGES.NOT_ENROLLED_IN_COURSE);
     }
 
-    // Check for duplicate submission
+    // C-2: Check for duplicate submission (app-level)
     const existing = await this.submissionModel.findOne({
       assignmentId,
       studentId,
     });
     if (existing) {
-      throw new ConflictException('Already submitted this assignment');
+      throw new ConflictException(ERROR_MESSAGES.ALREADY_SUBMITTED);
     }
 
-    return this.submissionModel.create({
-      studentId,
-      assignmentId,
-      content: dto.content,
-      fileUrls: dto.fileUrls ?? [],
-    });
+    // C-1: Handle MongoDB unique index violation (race condition safety)
+    try {
+      return await this.submissionModel.create({
+        studentId,
+        assignmentId,
+        content: dto.content,
+        fileUrls: dto.fileUrls ?? [],
+      });
+    } catch (error: unknown) {
+      const mongoError = error as MongoError;
+      if (mongoError.code === 11000) {
+        throw new ConflictException(ERROR_MESSAGES.ALREADY_SUBMITTED);
+      }
+      throw error;
+    }
   }
 
   async findByAssignment(
@@ -95,6 +114,7 @@ export class SubmissionsService {
 
   async addFeedback(
     submissionId: string,
+    assignmentId: string,
     userId: string,
     role: Role,
     dto: AddFeedbackDto,
@@ -102,6 +122,18 @@ export class SubmissionsService {
     const submission = await this.submissionModel.findById(submissionId);
     if (!submission) {
       throw new NotFoundException(ERROR_MESSAGES.SUBMISSION_NOT_FOUND);
+    }
+
+    // H-4: Verify submission belongs to the assignment in the URL
+    if (submission.assignmentId !== assignmentId) {
+      throw new BadRequestException(
+        ERROR_MESSAGES.SUBMISSION_ASSIGNMENT_MISMATCH,
+      );
+    }
+
+    // H-3: Guard against re-feedback on already REVIEWED submissions
+    if (submission.status === SubmissionStatus.REVIEWED) {
+      throw new ConflictException(ERROR_MESSAGES.SUBMISSION_ALREADY_REVIEWED);
     }
 
     // Verify ownership via assignment → course

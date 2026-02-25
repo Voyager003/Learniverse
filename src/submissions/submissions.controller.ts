@@ -14,6 +14,7 @@ import { AddFeedbackDto } from './dto/add-feedback.dto.js';
 import { SubmissionResponseDto } from './dto/submission-response.dto.js';
 import { Roles } from '../common/decorators/roles.decorator.js';
 import { RolesGuard } from '../common/guards/roles.guard.js';
+import { ParseMongoIdPipe } from '../common/pipes/parse-mongo-id.pipe.js';
 import { Role } from '../common/enums/index.js';
 import { RequestUser } from '../auth/interfaces/request-user.interface.js';
 
@@ -56,11 +57,12 @@ export class SubmissionsController {
   async addFeedback(
     @Req() req: { user: RequestUser },
     @Param('aid', ParseUUIDPipe) assignmentId: string,
-    @Param('sid') submissionId: string,
+    @Param('sid', ParseMongoIdPipe) submissionId: string,
     @Body() dto: AddFeedbackDto,
   ): Promise<SubmissionResponseDto> {
     const submission = await this.submissionsService.addFeedback(
       submissionId,
+      assignmentId,
       req.user.userId,
       req.user.role,
       dto,

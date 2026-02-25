@@ -1,6 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  NotFoundException,
+  ForbiddenException,
+  BadRequestException,
+} from '@nestjs/common';
 import { ObjectLiteral, Repository } from 'typeorm';
 import { AssignmentsService } from './assignments.service.js';
 import { Assignment } from './entities/assignment.entity.js';
@@ -131,6 +135,20 @@ describe('AssignmentsService', () => {
       await expect(
         service.create('nonexistent', 'tutor-uuid', Role.TUTOR, dto),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('과거 dueDate이면 BadRequestException을 던져야 한다', async () => {
+      const dtoWithPastDue = {
+        ...dto,
+        dueDate: '2020-01-01T00:00:00.000Z',
+      };
+      const course = { id: 'course-uuid', tutorId: 'tutor-uuid' } as Course;
+
+      courseRepository.findOne!.mockResolvedValue(course);
+
+      await expect(
+        service.create('course-uuid', 'tutor-uuid', Role.TUTOR, dtoWithPastDue),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('dueDate가 포함된 과제를 생성해야 한다', async () => {

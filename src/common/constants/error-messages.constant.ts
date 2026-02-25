@@ -25,8 +25,18 @@ export const ERROR_MESSAGES = {
 
   // Assignments
   ASSIGNMENT_NOT_FOUND: 'Assignment not found',
+  DUE_DATE_IN_PAST: 'Due date must be in the future',
 
   // Submissions
   SUBMISSION_NOT_FOUND: 'Submission not found',
   NOT_ENROLLED_IN_COURSE: 'You are not enrolled in this course',
+  ALREADY_SUBMITTED: 'Already submitted this assignment',
+  SUBMISSION_DEADLINE_PASSED: 'Submission deadline has passed',
+  SUBMISSION_ALREADY_REVIEWED:
+    'Cannot modify feedback on a reviewed submission',
+  SUBMISSION_ASSIGNMENT_MISMATCH:
+    'Submission does not belong to this assignment',
+
+  // Common
+  INVALID_MONGO_ID: 'Invalid ID format',
 } as const;

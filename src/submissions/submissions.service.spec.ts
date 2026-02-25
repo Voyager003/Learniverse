@@ -4,6 +4,7 @@ import {
   NotFoundException,
   ForbiddenException,
   ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import { SubmissionsService } from './submissions.service.js';
 import { Submission } from './schemas/submission.schema.js';
@@ -137,12 +138,66 @@ describe('SubmissionsService', () => {
       ).rejects.toThrow(ConflictException);
     });
 
+    it('MongoDB unique index 위반 시 ConflictException을 던져야 한다', async () => {
+      assignmentsService.findOne!.mockResolvedValue(mockAssignment);
+      enrollmentsService.isEnrolled!.mockResolvedValue(true);
+      submissionModel.findOne.mockResolvedValue(null);
+
+      const mongoError = new Error('E11000 duplicate key error');
+      Object.assign(mongoError, { code: 11000 });
+      submissionModel.create.mockRejectedValue(mongoError);
+
+      await expect(
+        service.submit('assignment-uuid', 'student-uuid', dto),
+      ).rejects.toThrow(ConflictException);
+    });
+
     it('과제를 찾을 수 없으면 NotFoundException을 던져야 한다', async () => {
       assignmentsService.findOne!.mockRejectedValue(new NotFoundException());
 
       await expect(
         service.submit('nonexistent', 'student-uuid', dto),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('마감일이 지난 과제에 제출하면 BadRequestException을 던져야 한다', async () => {
+      const pastDueAssignment = {
+        ...mockAssignment,
+        dueDate: new Date('2020-01-01'),
+      };
+      assignmentsService.findOne!.mockResolvedValue(pastDueAssignment);
+      enrollmentsService.isEnrolled!.mockResolvedValue(true);
+
+      await expect(
+        service.submit('assignment-uuid', 'student-uuid', dto),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('마감일이 없는 과제는 제출할 수 있어야 한다', async () => {
+      const noDueAssignment = {
+        ...mockAssignment,
+        dueDate: null,
+      };
+      const savedDoc = {
+        _id: { toString: () => 'submission-id' },
+        studentId: 'student-uuid',
+        assignmentId: 'assignment-uuid',
+        content: dto.content,
+        fileUrls: [],
+        status: SubmissionStatus.SUBMITTED,
+      };
+
+      assignmentsService.findOne!.mockResolvedValue(noDueAssignment);
+      enrollmentsService.isEnrolled!.mockResolvedValue(true);
+      submissionModel.findOne.mockResolvedValue(null);
+      submissionModel.create.mockResolvedValue(savedDoc);
+
+      const result = await service.submit(
+        'assignment-uuid',
+        'student-uuid',
+        dto,
+      );
+      expect(result).toEqual(savedDoc);
     });
 
     it('fileUrls가 포함된 제출을 생성해야 한다', async () => {
@@ -301,6 +356,7 @@ describe('SubmissionsService', () => {
 
       await service.addFeedback(
         'submission-id',
+        'assignment-uuid',
         'tutor-uuid',
         Role.TUTOR,
         feedbackDto,
@@ -325,9 +381,15 @@ describe('SubmissionsService', () => {
       submissionModel.findById.mockResolvedValue(submission);
       submission.save.mockResolvedValue(submission);
 
-      await service.addFeedback('submission-id', 'tutor-uuid', Role.TUTOR, {
-        feedback: '수정이 필요합니다.',
-      });
+      await service.addFeedback(
+        'submission-id',
+        'assignment-uuid',
+        'tutor-uuid',
+        Role.TUTOR,
+        {
+          feedback: '수정이 필요합니다.',
+        },
+      );
 
       expect(submission.status).toBe(SubmissionStatus.RETURNED);
     });
@@ -345,6 +407,7 @@ describe('SubmissionsService', () => {
       await expect(
         service.addFeedback(
           'submission-id',
+          'assignment-uuid',
           'other-tutor',
           Role.TUTOR,
           feedbackDto,
@@ -358,11 +421,80 @@ describe('SubmissionsService', () => {
       await expect(
         service.addFeedback(
           'nonexistent',
+          'assignment-uuid',
           'tutor-uuid',
           Role.TUTOR,
           feedbackDto,
         ),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('이미 REVIEWED 상태인 제출에 피드백을 추가하면 ConflictException을 던져야 한다', async () => {
+      const submission: MockSubmission = {
+        _id: 'submission-id',
+        assignmentId: 'assignment-uuid',
+        studentId: 'student-uuid',
+        status: SubmissionStatus.REVIEWED,
+        save: jest.fn(),
+      };
+
+      submissionModel.findById.mockResolvedValue(submission);
+
+      await expect(
+        service.addFeedback(
+          'submission-id',
+          'assignment-uuid',
+          'tutor-uuid',
+          Role.TUTOR,
+          feedbackDto,
+        ),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it('RETURNED 상태 제출에는 피드백을 추가할 수 있어야 한다', async () => {
+      const submission: MockSubmission = {
+        _id: 'submission-id',
+        assignmentId: 'assignment-uuid',
+        studentId: 'student-uuid',
+        status: SubmissionStatus.RETURNED,
+        save: jest.fn(),
+      };
+
+      assignmentsService.findOne!.mockResolvedValue(mockAssignment);
+      submissionModel.findById.mockResolvedValue(submission);
+      submission.save.mockResolvedValue(submission);
+
+      await service.addFeedback(
+        'submission-id',
+        'assignment-uuid',
+        'tutor-uuid',
+        Role.TUTOR,
+        feedbackDto,
+      );
+
+      expect(submission.save).toHaveBeenCalled();
+    });
+
+    it('URL의 assignmentId와 제출의 assignmentId가 다르면 BadRequestException을 던져야 한다', async () => {
+      const submission: MockSubmission = {
+        _id: 'submission-id',
+        assignmentId: 'different-assignment-uuid',
+        studentId: 'student-uuid',
+        status: SubmissionStatus.SUBMITTED,
+        save: jest.fn(),
+      };
+
+      submissionModel.findById.mockResolvedValue(submission);
+
+      await expect(
+        service.addFeedback(
+          'submission-id',
+          'assignment-uuid',
+          'tutor-uuid',
+          Role.TUTOR,
+          feedbackDto,
+        ),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('ADMIN은 피드백을 추가할 수 있어야 한다', async () => {
@@ -380,6 +512,7 @@ describe('SubmissionsService', () => {
 
       await service.addFeedback(
         'submission-id',
+        'assignment-uuid',
         'admin-uuid',
         Role.ADMIN,
         feedbackDto,

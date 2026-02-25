@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -30,6 +31,11 @@ export class AssignmentsService {
   ): Promise<Assignment> {
     const course = await this.findCourseOrFail(courseId);
     this.verifyOwnership(course, userId, role);
+
+    // H-1: Validate dueDate is not in the past
+    if (dto.dueDate && new Date(dto.dueDate) < new Date()) {
+      throw new BadRequestException(ERROR_MESSAGES.DUE_DATE_IN_PAST);
+    }
 
     const assignment = this.assignmentRepository.create({
       title: dto.title,

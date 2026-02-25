@@ -170,6 +170,7 @@ describe('SubmissionsController', () => {
       expect(result.feedback).toBe('잘 작성하셨습니다.');
       expect(submissionsService.addFeedback).toHaveBeenCalledWith(
         'submission-id',
+        'assignment-uuid',
         'tutor-uuid',
         Role.TUTOR,
         dto,
