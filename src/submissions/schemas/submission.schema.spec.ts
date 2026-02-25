@@ -1,4 +1,4 @@
-import { Submission } from './submission.schema.js';
+import { Submission, SubmissionSchema } from './submission.schema.js';
 import { SubmissionStatus } from '../../common/enums/index.js';
 
 describe('Submission 스키마', () => {
@@ -61,5 +61,28 @@ describe('Submission 스키마', () => {
     ];
 
     expect(submission.fileUrls).toHaveLength(3);
+  });
+
+  it('assignmentId에 단독 인덱스가 설정되어야 한다', () => {
+    const indexes = SubmissionSchema.indexes() as Array<
+      [Record<string, number>, Record<string, unknown>]
+    >;
+    const assignmentIdIndex = indexes.find(
+      ([fields]) => 'assignmentId' in fields && !('studentId' in fields),
+    );
+    expect(assignmentIdIndex).toBeDefined();
+  });
+
+  it('studentId + assignmentId에 unique 인덱스가 설정되어야 한다', () => {
+    const indexes = SubmissionSchema.indexes() as Array<
+      [Record<string, number>, Record<string, unknown>]
+    >;
+    const uniqueIndex = indexes.find(
+      ([fields, options]) =>
+        'studentId' in fields &&
+        'assignmentId' in fields &&
+        options.unique === true,
+    );
+    expect(uniqueIndex).toBeDefined();
   });
 });
