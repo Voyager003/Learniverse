@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigService } from '@nestjs/config';
+import { join } from 'node:path';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { ConfigService } from '@nestjs/config';
         database: configService.get<string>('database.database'),
         autoLoadEntities: true,
         synchronize: configService.get<string>('app.nodeEnv') !== 'production',
+        migrations: [join(__dirname, 'migrations', '*.{js,ts}')],
         extra: {
           max: 20,
           idleTimeoutMillis: 30000,

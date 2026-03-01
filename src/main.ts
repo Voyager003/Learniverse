@@ -32,7 +32,11 @@ async function bootstrap() {
   );
 
   // CORS
-  app.enableCors();
+  const corsOrigins = configService.get<string[]>('app.corsOrigins', []);
+  app.enableCors({
+    origin: corsOrigins.length > 0 ? corsOrigins : true,
+    credentials: true,
+  });
 
   // Swagger
   const swaggerConfig = new DocumentBuilder()

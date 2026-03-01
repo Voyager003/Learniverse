@@ -3,6 +3,7 @@ import { configValidationSchema } from './config.validation.js';
 interface ValidatedEnv {
   PORT: number;
   NODE_ENV: string;
+  APP_CORS_ORIGINS: string;
   DB_HOST: string;
   DB_PORT: number;
   DB_USERNAME: string;
@@ -24,6 +25,7 @@ describe('ConfigValidation', () => {
     expect(error).toBeUndefined();
     expect(value.PORT).toBe(3000);
     expect(value.NODE_ENV).toBe('development');
+    expect(value.APP_CORS_ORIGINS).toBe('');
     expect(value.DB_HOST).toBe('localhost');
     expect(value.DB_PORT).toBe(5432);
   });
@@ -32,6 +34,8 @@ describe('ConfigValidation', () => {
     const env = {
       PORT: 4000,
       NODE_ENV: 'production',
+      APP_CORS_ORIGINS:
+        'https://app.learniverse.com,https://learniverse.vercel.app',
       DB_HOST: '10.0.0.1',
       DB_PORT: 5433,
       DB_USERNAME: 'admin',
@@ -51,6 +55,7 @@ describe('ConfigValidation', () => {
     expect(error).toBeUndefined();
     expect(value.PORT).toBe(4000);
     expect(value.NODE_ENV).toBe('production');
+    expect(value.APP_CORS_ORIGINS).toContain('https://app.learniverse.com');
   });
 
   it('유효하지 않은 NODE_ENV를 거부해야 한다', () => {

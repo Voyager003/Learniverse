@@ -152,7 +152,10 @@ describe('AssignmentsService', () => {
     });
 
     it('dueDate가 포함된 과제를 생성해야 한다', async () => {
-      const dtoWithDue = { ...dto, dueDate: '2026-03-01T00:00:00.000Z' };
+      const futureDueDate = new Date(
+        Date.now() + 1000 * 60 * 60 * 24,
+      ).toISOString();
+      const dtoWithDue = { ...dto, dueDate: futureDueDate };
       const course = { id: 'course-uuid', tutorId: 'tutor-uuid' } as Course;
       const assignment = { id: 'assignment-uuid' } as Assignment;
 
@@ -166,7 +169,7 @@ describe('AssignmentsService', () => {
         title: dto.title,
         description: dto.description,
         courseId: 'course-uuid',
-        dueDate: new Date('2026-03-01T00:00:00.000Z'),
+        dueDate: new Date(futureDueDate),
       });
     });
   });
