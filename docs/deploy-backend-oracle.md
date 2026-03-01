@@ -5,7 +5,7 @@
 This project deploys with Docker on a single Oracle Cloud VM.
 
 - Registry: GHCR
-- CI/CD: GitHub Actions
+- CI/CD: GitHub Actions (self-hosted runner on Oracle VM)
 - Runtime stack: NestJS + PostgreSQL + MongoDB
 - Public entrypoint: `http://<oracle-public-ip>` or custom domain
 
@@ -52,16 +52,25 @@ cp /opt/learniverse/infra/prod/.env.prod.template /opt/learniverse/infra/prod/.e
 
 Update real production values in `.env.prod`.
 
-## 5. GitHub Actions Secrets
+## 5. Register Self-Hosted Runner
 
-Add these secrets in repository settings:
+Create and register a self-hosted runner on Oracle VM from:
 
-- `ORACLE_HOST`
-- `ORACLE_USER`
-- `ORACLE_SSH_KEY`
-- `ORACLE_PORT`
+`GitHub Repository > Settings > Actions > Runners > New self-hosted runner`
 
-`deploy-prod.yml` uses `GITHUB_TOKEN` for GHCR push.
+Use Linux instructions from GitHub UI, then run the service permanently:
+
+```bash
+sudo ./svc.sh install
+sudo ./svc.sh start
+```
+
+Label the runner with:
+
+- `self-hosted`
+- `learniverse-prod`
+
+`deploy-prod.yml` uses `GITHUB_TOKEN` for GHCR push. No SSH secrets are required.
 
 ## 6. Deploy Flow
 
@@ -69,7 +78,7 @@ Add these secrets in repository settings:
 2. Workflow `Deploy Production`:
    - runs tests/build
    - builds and pushes Docker image to GHCR
-   - SSH into Oracle VM and executes:
+   - self-hosted runner on Oracle VM executes:
 
 ```bash
 /opt/learniverse/scripts/deploy-prod.sh <image-tag>

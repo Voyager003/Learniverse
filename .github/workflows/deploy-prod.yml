@@ -78,19 +78,15 @@ jobs:
             ghcr.io/${{ steps.image_meta.outputs.owner_lc }}/learniverse:latest
 
   deploy:
-    runs-on: ubuntu-latest
+    runs-on:
+      - self-hosted
+      - learniverse-prod
     needs: build-and-push
     steps:
-      - name: Deploy to Oracle VM
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.ORACLE_HOST }}
-          username: ${{ secrets.ORACLE_USER }}
-          key: ${{ secrets.ORACLE_SSH_KEY }}
-          port: ${{ secrets.ORACLE_PORT }}
-          script: |
-            cd /opt/learniverse
-            git fetch origin main
-            git checkout main
-            git pull --ff-only origin main
-            /opt/learniverse/scripts/deploy-prod.sh ${{ needs.build-and-push.outputs.image_tag }}
+      - name: Deploy on self-hosted runner
+        run: |
+          cd /opt/learniverse
+          git fetch origin main
+          git checkout main
+          git pull --ff-only origin main
+          /opt/learniverse/scripts/deploy-prod.sh ${{ needs.build-and-push.outputs.image_tag }}
