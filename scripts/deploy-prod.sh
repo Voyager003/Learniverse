@@ -29,7 +29,21 @@ docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d postgres mongodb
 docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" run --rm app npm run migration:run:prod
 docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d app
 
-docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" exec -T app \
-  node -e "fetch('http://localhost:3000/api/v1/health').then((res)=>{if(!res.ok)process.exit(1)}).catch(()=>process.exit(1))"
+MAX_RETRIES=30
+SLEEP_SECONDS=2
+ATTEMPT=1
+
+until docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" exec -T app \
+  node -e "fetch('http://localhost:3000/api/v1/health').then((res)=>{if(!res.ok)process.exit(1)}).catch(()=>process.exit(1))"; do
+  if [[ $ATTEMPT -ge $MAX_RETRIES ]]; then
+    echo "Health check failed after $MAX_RETRIES attempts"
+    docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" logs --tail=200 app
+    exit 1
+  fi
+
+  echo "Health check retry $ATTEMPT/$MAX_RETRIES in ${SLEEP_SECONDS}s..."
+  ATTEMPT=$((ATTEMPT + 1))
+  sleep "$SLEEP_SECONDS"
+done
 
 echo "Deployment successful with tag: $IMAGE_TAG"
