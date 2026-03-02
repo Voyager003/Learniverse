@@ -7,6 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { QueryFailedError, Repository } from 'typeorm';
 import { User } from './entities/user.entity.js';
 import { ERROR_MESSAGES } from '../common/constants/error-messages.constant.js';
+import { Role } from '../common/enums/index.js';
 
 const UNIQUE_VIOLATION_CODE = '23505';
 
@@ -33,6 +34,7 @@ export class UsersService {
     email: string;
     passwordHash: string;
     name: string;
+    role: Role;
   }): Promise<User> {
     const existing = await this.findByEmail(data.email);
     if (existing) {

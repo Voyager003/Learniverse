@@ -85,6 +85,7 @@ describe('UsersService', () => {
         email: 'new@example.com',
         passwordHash: 'hashed',
         name: 'New User',
+        role: Role.STUDENT,
       };
       const user = {
         id: 'uuid-new',
@@ -112,6 +113,7 @@ describe('UsersService', () => {
           email: 'exists@example.com',
           passwordHash: 'hashed',
           name: 'Duplicate',
+          role: Role.STUDENT,
         }),
       ).rejects.toThrow(ConflictException);
     });
@@ -136,6 +138,7 @@ describe('UsersService', () => {
           email: 'race@example.com',
           passwordHash: 'hashed',
           name: 'Race User',
+          role: Role.TUTOR,
         }),
       ).rejects.toThrow(ConflictException);
     });
