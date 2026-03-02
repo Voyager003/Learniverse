@@ -72,4 +72,12 @@ describe('ConfigValidation', () => {
     });
     expect(error).toBeDefined();
   });
+
+  it('production에서 APP_CORS_ORIGINS 누락 시 거부해야 한다', () => {
+    const { error } = configValidationSchema.validate({
+      NODE_ENV: 'production',
+    });
+    expect(error).toBeDefined();
+    expect(error!.message).toContain('APP_CORS_ORIGINS');
+  });
 });

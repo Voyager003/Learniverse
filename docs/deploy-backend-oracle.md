@@ -7,7 +7,7 @@ This project deploys with Docker on a single Oracle Cloud VM.
 - Registry: GHCR
 - CI/CD: GitHub Actions (self-hosted runner on Oracle VM)
 - Runtime stack: NestJS + PostgreSQL + MongoDB
-- Public entrypoint: `http://<oracle-public-ip>` or custom domain
+- Public entrypoint: `https://api.<your-domain>`
 
 ## 2. Server Bootstrap
 
@@ -51,6 +51,13 @@ cp /opt/learniverse/infra/prod/.env.prod.template /opt/learniverse/infra/prod/.e
 ```
 
 Update real production values in `.env.prod`.
+
+Minimum required values:
+
+- `APP_CORS_ORIGINS=https://<your-vercel-domain>[,https://<your-custom-frontend-domain>]`
+- `JWT_SECRET`
+- `JWT_REFRESH_SECRET`
+- `DB_PASSWORD`
 
 ## 5. Register Self-Hosted Runner
 
@@ -105,3 +112,15 @@ Application health endpoint:
 - `GET /api/v1/health`
 
 The deploy script fails if this endpoint is unhealthy.
+
+## 10. Frontend Integration
+
+Set Vercel Production Environment Variable:
+
+- `NEXT_PUBLIC_API_URL=https://api.<your-domain>/api/v1`
+
+After changing env values, redeploy frontend and verify:
+
+- login
+- token refresh
+- authenticated APIs (e.g. `/users/me`)

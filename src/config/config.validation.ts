@@ -6,7 +6,11 @@ export const configValidationSchema = Joi.object({
   NODE_ENV: Joi.string()
     .valid('development', 'production', 'test')
     .default('development'),
-  APP_CORS_ORIGINS: Joi.string().allow('').default(''),
+  APP_CORS_ORIGINS: Joi.when('NODE_ENV', {
+    is: 'production',
+    then: Joi.string().min(1).required(),
+    otherwise: Joi.string().allow('').default(''),
+  }),
 
   // PostgreSQL
   DB_HOST: Joi.string().default('localhost'),

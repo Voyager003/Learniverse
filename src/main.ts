@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, Logger } from '@nestjs/common';
+import { ValidationPipe, Logger, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module.js';
@@ -33,6 +33,12 @@ async function bootstrap() {
 
   // CORS
   const corsOrigins = configService.get<string[]>('app.corsOrigins', []);
+  const nodeEnv = configService.get<string>('app.nodeEnv', 'development');
+  if (nodeEnv === 'production' && corsOrigins.length === 0) {
+    throw new BadRequestException(
+      'APP_CORS_ORIGINS must be configured in production',
+    );
+  }
   app.enableCors({
     origin: corsOrigins.length > 0 ? corsOrigins : true,
     credentials: true,
