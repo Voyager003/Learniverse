@@ -83,11 +83,17 @@ describe('AuthService', () => {
         email: 'new@example.com',
         password: 'password123',
         name: 'New User',
+        role: Role.TUTOR,
       });
 
       expect(result).toHaveProperty('accessToken');
       expect(result).toHaveProperty('refreshToken');
-      expect(usersService.create).toHaveBeenCalled();
+      expect(usersService.create).toHaveBeenCalledWith({
+        email: 'new@example.com',
+        passwordHash: 'hashed-pw',
+        name: 'New User',
+        role: Role.TUTOR,
+      });
     });
 
     it('이메일이 이미 존재하면 ConflictException을 던져야 한다', async () => {
@@ -98,8 +104,31 @@ describe('AuthService', () => {
           email: 'test@example.com',
           password: 'password123',
           name: 'Test',
+          role: Role.STUDENT,
         }),
       ).rejects.toThrow(ConflictException);
+    });
+
+    it('role이 없으면 STUDENT로 가입해야 한다', async () => {
+      usersService.findByEmail!.mockResolvedValue(null);
+      mockedHash.mockResolvedValue('hashed-pw');
+      usersService.create!.mockResolvedValue({ ...mockUser, id: 'new-uuid' });
+      jwtService.signAsync!.mockResolvedValueOnce('access-token');
+      jwtService.signAsync!.mockResolvedValueOnce('refresh-token');
+      usersService.updateRefreshToken!.mockResolvedValue(undefined);
+
+      await authService.register({
+        email: 'default-role@example.com',
+        password: 'password123',
+        name: 'Default Role',
+      });
+
+      expect(usersService.create).toHaveBeenCalledWith({
+        email: 'default-role@example.com',
+        passwordHash: 'hashed-pw',
+        name: 'Default Role',
+        role: Role.STUDENT,
+      });
     });
   });
 

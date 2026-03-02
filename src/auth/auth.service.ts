@@ -36,6 +36,7 @@ export class AuthService {
       email: dto.email,
       passwordHash,
       name: dto.name,
+      role: dto.role ?? Role.STUDENT,
     });
 
     const tokens = await this.generateTokens(user.id, user.email, user.role);

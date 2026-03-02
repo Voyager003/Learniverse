@@ -29,6 +29,7 @@ describe('Auth (e2e)', () => {
       email: 'test@example.com',
       password: 'password123',
       name: 'Test User',
+      role: 'student',
     };
 
     it('회원가입 성공 시 201과 토큰 쌍을 반환한다', async () => {
@@ -77,10 +78,30 @@ describe('Auth (e2e)', () => {
         .expect(400);
     });
 
-    it('허용되지 않은 필드가 포함되면 400을 반환한다', async () => {
+    it('튜터 role로 회원가입할 수 있다', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/auth/register')
+        .send({
+          email: 'tutor@example.com',
+          password: 'password123',
+          name: 'Tutor User',
+          role: 'tutor',
+        })
+        .expect(201);
+
+      const body = res.body as SuccessBody<AuthTokens>;
+      expect(body.data).toHaveProperty('accessToken');
+      expect(body.data).toHaveProperty('refreshToken');
+    });
+
+    it('허용되지 않은 role이면 400을 반환한다', async () => {
       await request(app.getHttpServer())
         .post('/api/v1/auth/register')
-        .send({ ...validUser, email: 'extra@example.com', role: 'ADMIN' })
+        .send({
+          ...validUser,
+          email: 'invalid-role@example.com',
+          role: 'admin',
+        })
         .expect(400);
     });
   });

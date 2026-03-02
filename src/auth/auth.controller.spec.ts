@@ -37,6 +37,7 @@ describe('AuthController', () => {
         email: 'new@example.com',
         password: 'password123',
         name: 'New User',
+        role: Role.TUTOR,
       };
       authService.register!.mockResolvedValue(mockTokens);
 
