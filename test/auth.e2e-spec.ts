@@ -97,7 +97,11 @@ describe('Auth (e2e)', () => {
     it('허용되지 않은 role이면 400을 반환한다', async () => {
       await request(app.getHttpServer())
         .post('/api/v1/auth/register')
-        .send({ ...validUser, email: 'invalid-role@example.com', role: 'admin' })
+        .send({
+          ...validUser,
+          email: 'invalid-role@example.com',
+          role: 'admin',
+        })
         .expect(400);
     });
   });
