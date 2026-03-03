@@ -76,7 +76,6 @@ describe('AssignmentsController', () => {
       expect(assignmentsService.create).toHaveBeenCalledWith(
         'course-uuid',
         'tutor-uuid',
-        Role.TUTOR,
         dto,
       );
     });

@@ -14,16 +14,13 @@ import {
 import { CoursesService } from './courses.service.js';
 import { Course } from './entities/course.entity.js';
 import { Lecture } from './entities/lecture.entity.js';
-import {
-  CourseCategory,
-  CourseDifficulty,
-  Role,
-} from '../common/enums/index.js';
+import { CourseCategory, CourseDifficulty } from '../common/enums/index.js';
 import { CreateCourseDto } from './dto/create-course.dto.js';
 import { UpdateCourseDto } from './dto/update-course.dto.js';
 import { CourseQueryDto } from './dto/course-query.dto.js';
 import { CreateLectureDto } from './dto/create-lecture.dto.js';
 import { UpdateLectureDto } from './dto/update-lecture.dto.js';
+import { CourseOwnershipPolicy } from '../common/policies/course-ownership.policy.js';
 
 type MockRepository<T extends ObjectLiteral> = Partial<
   Record<keyof Repository<T>, jest.Mock>
@@ -43,10 +40,22 @@ describe('CoursesService', () => {
   let service: CoursesService;
   let courseRepository: MockRepository<Course>;
   let lectureRepository: MockRepository<Lecture>;
+  let courseOwnershipPolicy: Partial<
+    Record<keyof CourseOwnershipPolicy, jest.Mock>
+  >;
 
   beforeEach(async () => {
     courseRepository = createMockRepository<Course>();
     lectureRepository = createMockRepository<Lecture>();
+    courseOwnershipPolicy = {
+      assertTutorOwnsCourse: jest.fn(
+        (courseTutorId: string, userId: string) => {
+          if (courseTutorId !== userId) {
+            throw new ForbiddenException();
+          }
+        },
+      ),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -58,6 +67,10 @@ describe('CoursesService', () => {
         {
           provide: getRepositoryToken(Lecture),
           useValue: lectureRepository,
+        },
+        {
+          provide: CourseOwnershipPolicy,
+          useValue: courseOwnershipPolicy,
         },
       ],
     }).compile();
@@ -248,14 +261,13 @@ describe('CoursesService', () => {
       courseRepository.findOne!.mockResolvedValue(course);
       courseRepository.save!.mockResolvedValue(updated);
 
-      const result = await service.update(
-        'course-uuid',
-        'tutor-uuid',
-        Role.TUTOR,
-        dto,
-      );
+      const result = await service.update('course-uuid', 'tutor-uuid', dto);
 
       expect(result.title).toBe('New');
+      expect(courseOwnershipPolicy.assertTutorOwnsCourse).toHaveBeenCalledWith(
+        'tutor-uuid',
+        'tutor-uuid',
+      );
     });
 
     it('소유자가 아니면 ForbiddenException을 던져야 한다', async () => {
@@ -263,38 +275,17 @@ describe('CoursesService', () => {
       courseRepository.findOne!.mockResolvedValue(course);
 
       await expect(
-        service.update('course-uuid', 'tutor-uuid', Role.TUTOR, {
+        service.update('course-uuid', 'tutor-uuid', {
           title: 'New',
         }),
       ).rejects.toThrow(ForbiddenException);
-    });
-
-    it('ADMIN은 모든 강좌를 수정할 수 있어야 한다', async () => {
-      const course = {
-        id: 'course-uuid',
-        tutorId: 'other-tutor',
-        title: 'Old',
-      } as Course;
-      const updated = { ...course, title: 'Admin Updated' } as Course;
-
-      courseRepository.findOne!.mockResolvedValue(course);
-      courseRepository.save!.mockResolvedValue(updated);
-
-      const result = await service.update(
-        'course-uuid',
-        'admin-uuid',
-        Role.ADMIN,
-        { title: 'Admin Updated' },
-      );
-
-      expect(result.title).toBe('Admin Updated');
     });
 
     it('강좌를 찾을 수 없으면 NotFoundException을 던져야 한다', async () => {
       courseRepository.findOne!.mockResolvedValue(null);
 
       await expect(
-        service.update('nonexistent', 'tutor-uuid', Role.TUTOR, {
+        service.update('nonexistent', 'tutor-uuid', {
           title: 'New',
         }),
       ).rejects.toThrow(NotFoundException);
@@ -307,7 +298,7 @@ describe('CoursesService', () => {
       courseRepository.findOne!.mockResolvedValue(course);
       courseRepository.remove!.mockResolvedValue(course);
 
-      await service.remove('course-uuid', 'tutor-uuid', Role.TUTOR);
+      await service.remove('course-uuid', 'tutor-uuid');
 
       expect(courseRepository.remove).toHaveBeenCalledWith(course);
     });
@@ -316,27 +307,17 @@ describe('CoursesService', () => {
       const course = { id: 'course-uuid', tutorId: 'other-tutor' } as Course;
       courseRepository.findOne!.mockResolvedValue(course);
 
-      await expect(
-        service.remove('course-uuid', 'tutor-uuid', Role.TUTOR),
-      ).rejects.toThrow(ForbiddenException);
-    });
-
-    it('ADMIN은 모든 강좌를 삭제할 수 있어야 한다', async () => {
-      const course = { id: 'course-uuid', tutorId: 'other-tutor' } as Course;
-      courseRepository.findOne!.mockResolvedValue(course);
-      courseRepository.remove!.mockResolvedValue(course);
-
-      await service.remove('course-uuid', 'admin-uuid', Role.ADMIN);
-
-      expect(courseRepository.remove).toHaveBeenCalledWith(course);
+      await expect(service.remove('course-uuid', 'tutor-uuid')).rejects.toThrow(
+        ForbiddenException,
+      );
     });
 
     it('강좌를 찾을 수 없으면 NotFoundException을 던져야 한다', async () => {
       courseRepository.findOne!.mockResolvedValue(null);
 
-      await expect(
-        service.remove('nonexistent', 'tutor-uuid', Role.TUTOR),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.remove('nonexistent', 'tutor-uuid')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -363,7 +344,6 @@ describe('CoursesService', () => {
       const result = await service.createLecture(
         'course-uuid',
         'tutor-uuid',
-        Role.TUTOR,
         dto,
       );
 
@@ -372,6 +352,10 @@ describe('CoursesService', () => {
         ...dto,
         courseId: 'course-uuid',
       });
+      expect(courseOwnershipPolicy.assertTutorOwnsCourse).toHaveBeenCalledWith(
+        'tutor-uuid',
+        'tutor-uuid',
+      );
     });
 
     it('강좌 소유자가 아니면 ForbiddenException을 던져야 한다', async () => {
@@ -379,7 +363,7 @@ describe('CoursesService', () => {
       courseRepository.findOne!.mockResolvedValue(course);
 
       await expect(
-        service.createLecture('course-uuid', 'tutor-uuid', Role.TUTOR, {
+        service.createLecture('course-uuid', 'tutor-uuid', {
           title: 'Lecture 1',
           content: 'Content',
           order: 1,
@@ -405,7 +389,7 @@ describe('CoursesService', () => {
       lectureRepository.save!.mockRejectedValue(queryError);
 
       await expect(
-        service.createLecture('course-uuid', 'tutor-uuid', Role.TUTOR, {
+        service.createLecture('course-uuid', 'tutor-uuid', {
           title: 'Lecture',
           content: 'Content',
           order: 1,
@@ -433,7 +417,6 @@ describe('CoursesService', () => {
         'course-uuid',
         'lecture-uuid',
         'tutor-uuid',
-        Role.TUTOR,
         dto,
       );
 
@@ -445,13 +428,9 @@ describe('CoursesService', () => {
       courseRepository.findOne!.mockResolvedValue(course);
 
       await expect(
-        service.updateLecture(
-          'course-uuid',
-          'lecture-uuid',
-          'tutor-uuid',
-          Role.TUTOR,
-          { title: 'New' },
-        ),
+        service.updateLecture('course-uuid', 'lecture-uuid', 'tutor-uuid', {
+          title: 'New',
+        }),
       ).rejects.toThrow(ForbiddenException);
     });
 
@@ -461,13 +440,9 @@ describe('CoursesService', () => {
       lectureRepository.findOne!.mockResolvedValue(null);
 
       await expect(
-        service.updateLecture(
-          'course-uuid',
-          'nonexistent',
-          'tutor-uuid',
-          Role.TUTOR,
-          { title: 'New' },
-        ),
+        service.updateLecture('course-uuid', 'nonexistent', 'tutor-uuid', {
+          title: 'New',
+        }),
       ).rejects.toThrow(NotFoundException);
     });
   });
@@ -484,12 +459,7 @@ describe('CoursesService', () => {
       lectureRepository.findOne!.mockResolvedValue(lecture);
       lectureRepository.remove!.mockResolvedValue(lecture);
 
-      await service.removeLecture(
-        'course-uuid',
-        'lecture-uuid',
-        'tutor-uuid',
-        Role.TUTOR,
-      );
+      await service.removeLecture('course-uuid', 'lecture-uuid', 'tutor-uuid');
 
       expect(lectureRepository.remove).toHaveBeenCalledWith(lecture);
     });
@@ -499,12 +469,7 @@ describe('CoursesService', () => {
       courseRepository.findOne!.mockResolvedValue(course);
 
       await expect(
-        service.removeLecture(
-          'course-uuid',
-          'lecture-uuid',
-          'tutor-uuid',
-          Role.TUTOR,
-        ),
+        service.removeLecture('course-uuid', 'lecture-uuid', 'tutor-uuid'),
       ).rejects.toThrow(ForbiddenException);
     });
 
@@ -514,12 +479,7 @@ describe('CoursesService', () => {
       lectureRepository.findOne!.mockResolvedValue(null);
 
       await expect(
-        service.removeLecture(
-          'course-uuid',
-          'nonexistent',
-          'tutor-uuid',
-          Role.TUTOR,
-        ),
+        service.removeLecture('course-uuid', 'nonexistent', 'tutor-uuid'),
       ).rejects.toThrow(NotFoundException);
     });
   });

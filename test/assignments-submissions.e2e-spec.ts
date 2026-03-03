@@ -1,6 +1,7 @@
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { INestApplication } from '@nestjs/common';
+import { Connection } from 'mongoose';
 import { DataSource } from 'typeorm';
 import { ERROR_MESSAGES } from '../src/common/constants/error-messages.constant';
 import {
@@ -10,6 +11,15 @@ import {
 } from './helpers/create-app';
 import { promoteToTutor } from './helpers/seed-helpers';
 import { SuccessBody, ErrorBody, AuthTokens } from './helpers/test-interfaces';
+import {
+  expectErrorEnvelope,
+  expectSuccessEnvelope,
+} from './helpers/assert-response';
+import {
+  assertSubmissionCount,
+  assertSubmissionState,
+  getUserIdByEmail,
+} from './helpers/db-assertions';
 
 interface CourseData {
   id: string;
@@ -44,6 +54,7 @@ describe('Assignments & Submissions (e2e)', () => {
   let app: INestApplication<App>;
   let ctx: TestContext;
   let dataSource: DataSource;
+  let mongoConnection: Connection;
 
   // Shared state
   let tutorToken: string;
@@ -53,11 +64,13 @@ describe('Assignments & Submissions (e2e)', () => {
   let courseId: string;
   let assignmentId: string;
   let submissionId: string;
+  let studentId: string;
 
   beforeAll(async () => {
     ctx = await createTestApp();
     app = ctx.app as INestApplication<App>;
     dataSource = ctx.dataSource;
+    mongoConnection = ctx.mongoConnection;
 
     // --- Seed test data ---
 
@@ -71,7 +84,8 @@ describe('Assignments & Submissions (e2e)', () => {
     const tutorLogin = await request(app.getHttpServer())
       .post('/api/v1/auth/login')
       .send({ email: 'assign-tutor@test.com', password: 'password123' });
-    tutorToken = (tutorLogin.body as SuccessBody<AuthTokens>).data.accessToken;
+    tutorToken = expectSuccessEnvelope<AuthTokens>(tutorLogin, 200).data
+      .accessToken;
 
     // 2. Other TUTOR + promote + login
     await request(app.getHttpServer()).post('/api/v1/auth/register').send({
@@ -83,8 +97,8 @@ describe('Assignments & Submissions (e2e)', () => {
     const otherTutorLogin = await request(app.getHttpServer())
       .post('/api/v1/auth/login')
       .send({ email: 'assign-other-tutor@test.com', password: 'password123' });
-    otherTutorToken = (otherTutorLogin.body as SuccessBody<AuthTokens>).data
-      .accessToken;
+    otherTutorToken = expectSuccessEnvelope<AuthTokens>(otherTutorLogin, 200)
+      .data.accessToken;
 
     // 3. STUDENT (will be enrolled) + login
     await request(app.getHttpServer()).post('/api/v1/auth/register').send({
@@ -95,8 +109,9 @@ describe('Assignments & Submissions (e2e)', () => {
     const studentLogin = await request(app.getHttpServer())
       .post('/api/v1/auth/login')
       .send({ email: 'assign-student@test.com', password: 'password123' });
-    studentToken = (studentLogin.body as SuccessBody<AuthTokens>).data
+    studentToken = expectSuccessEnvelope<AuthTokens>(studentLogin, 200).data
       .accessToken;
+    studentId = await getUserIdByEmail(dataSource, 'assign-student@test.com');
 
     // 4. Unenrolled STUDENT + login
     await request(app.getHttpServer()).post('/api/v1/auth/register').send({
@@ -107,8 +122,10 @@ describe('Assignments & Submissions (e2e)', () => {
     const unenrolledLogin = await request(app.getHttpServer())
       .post('/api/v1/auth/login')
       .send({ email: 'assign-unenrolled@test.com', password: 'password123' });
-    unenrolledStudentToken = (unenrolledLogin.body as SuccessBody<AuthTokens>)
-      .data.accessToken;
+    unenrolledStudentToken = expectSuccessEnvelope<AuthTokens>(
+      unenrolledLogin,
+      200,
+    ).data.accessToken;
 
     // 5. Create course + publish
     const courseRes = await request(app.getHttpServer())
@@ -314,6 +331,13 @@ describe('Assignments & Submissions (e2e)', () => {
       expect(body.data.score).toBeNull();
       expect(body.data.fileUrls).toEqual([]);
       submissionId = body.data.id;
+
+      await assertSubmissionState(mongoConnection, assignmentId, studentId, {
+        status: 'submitted',
+        feedback: null,
+        score: null,
+        reviewedAt: 'null',
+      });
     });
 
     it('동일 과제에 중복 제출하면 409를 반환한다', async () => {
@@ -325,6 +349,40 @@ describe('Assignments & Submissions (e2e)', () => {
 
       const body = res.body as ErrorBody;
       expect(body.message).toBe(ERROR_MESSAGES.ALREADY_SUBMITTED);
+    });
+
+    it('동일 제출 요청을 동시에 보내면 1건만 성공한다', async () => {
+      const raceAssignmentRes = await request(app.getHttpServer())
+        .post(`/api/v1/courses/${courseId}/assignments`)
+        .set('Authorization', `Bearer ${tutorToken}`)
+        .send({
+          title: 'Submission Race Assignment',
+          description: 'concurrency test assignment',
+        })
+        .expect(201);
+      const raceAssignmentId = (
+        raceAssignmentRes.body as SuccessBody<AssignmentData>
+      ).data.id;
+
+      const [r1, r2] = await Promise.all([
+        request(app.getHttpServer())
+          .post(`/api/v1/assignments/${raceAssignmentId}/submissions`)
+          .set('Authorization', `Bearer ${studentToken}`)
+          .send({ content: 'race answer A' }),
+        request(app.getHttpServer())
+          .post(`/api/v1/assignments/${raceAssignmentId}/submissions`)
+          .set('Authorization', `Bearer ${studentToken}`)
+          .send({ content: 'race answer B' }),
+      ]);
+
+      const statuses = [r1.status, r2.status].sort((a, b) => a - b);
+      expect(statuses).toEqual([201, 409]);
+      await assertSubmissionCount(
+        mongoConnection,
+        raceAssignmentId,
+        studentId,
+        1,
+      );
     });
 
     it('미수강 STUDENT가 제출하면 403을 반환한다', async () => {
@@ -443,6 +501,12 @@ describe('Assignments & Submissions (e2e)', () => {
       expect(body.data.status).toBe('returned');
       expect(body.data.score).toBeNull();
       expect(body.data.reviewedAt).not.toBeNull();
+      await assertSubmissionState(mongoConnection, assignmentId, studentId, {
+        status: 'returned',
+        feedback: '보완이 필요합니다.',
+        score: null,
+        reviewedAt: 'not-null',
+      });
     });
 
     it('소유자 TUTOR가 score 포함 피드백하면 201과 REVIEWED 상태를 반환한다', async () => {
@@ -459,6 +523,12 @@ describe('Assignments & Submissions (e2e)', () => {
       expect(body.data.score).toBe(95);
       expect(body.data.status).toBe('reviewed');
       expect(body.data.reviewedAt).not.toBeNull();
+      await assertSubmissionState(mongoConnection, assignmentId, studentId, {
+        status: 'reviewed',
+        feedback: '잘 작성하셨습니다.',
+        score: 95,
+        reviewedAt: 'not-null',
+      });
     });
 
     it('이미 REVIEWED 상태인 제출에 피드백하면 409를 반환한다', async () => {
@@ -470,7 +540,11 @@ describe('Assignments & Submissions (e2e)', () => {
         .send({ feedback: 'Again', score: 80 })
         .expect(409);
 
-      const body = res.body as ErrorBody;
+      const body = expectErrorEnvelope(
+        res,
+        409,
+        ERROR_MESSAGES.SUBMISSION_ALREADY_REVIEWED,
+      );
       expect(body.message).toBe(ERROR_MESSAGES.SUBMISSION_ALREADY_REVIEWED);
     });
 

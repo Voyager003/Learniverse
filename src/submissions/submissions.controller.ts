@@ -76,8 +76,8 @@ export class SubmissionsController {
 
   @Post(':sid/feedback')
   @UseGuards(RolesGuard)
-  @Roles(Role.TUTOR, Role.ADMIN)
-  @ApiOperation({ summary: '피드백 추가 (TUTOR, ADMIN)' })
+  @Roles(Role.TUTOR)
+  @ApiOperation({ summary: '피드백 추가 (TUTOR)' })
   @ApiResponse({
     status: 201,
     description: '피드백 성공',
@@ -97,7 +97,6 @@ export class SubmissionsController {
       submissionId,
       assignmentId,
       req.user.userId,
-      req.user.role,
       dto,
     );
     return SubmissionResponseDto.from(submission);

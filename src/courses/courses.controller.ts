@@ -43,9 +43,9 @@ export class CoursesController {
 
   @Post()
   @UseGuards(RolesGuard)
-  @Roles(Role.TUTOR, Role.ADMIN)
+  @Roles(Role.TUTOR)
   @ApiBearerAuth()
-  @ApiOperation({ summary: '강좌 생성 (TUTOR, ADMIN)' })
+  @ApiOperation({ summary: '강좌 생성 (TUTOR)' })
   @ApiResponse({
     status: 201,
     description: '생성 성공',
@@ -94,9 +94,9 @@ export class CoursesController {
 
   @Patch(':id')
   @UseGuards(RolesGuard)
-  @Roles(Role.TUTOR, Role.ADMIN)
+  @Roles(Role.TUTOR)
   @ApiBearerAuth()
-  @ApiOperation({ summary: '강좌 수정 (TUTOR, ADMIN)' })
+  @ApiOperation({ summary: '강좌 수정 (TUTOR)' })
   @ApiResponse({
     status: 200,
     description: '수정 성공',
@@ -109,21 +109,16 @@ export class CoursesController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateCourseDto,
   ): Promise<CourseResponseDto> {
-    const course = await this.coursesService.update(
-      id,
-      req.user.userId,
-      req.user.role,
-      dto,
-    );
+    const course = await this.coursesService.update(id, req.user.userId, dto);
     return CourseResponseDto.from(course);
   }
 
   @Delete(':id')
   @UseGuards(RolesGuard)
-  @Roles(Role.TUTOR, Role.ADMIN)
+  @Roles(Role.TUTOR)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiBearerAuth()
-  @ApiOperation({ summary: '강좌 삭제 (TUTOR, ADMIN)' })
+  @ApiOperation({ summary: '강좌 삭제 (TUTOR)' })
   @ApiResponse({ status: 204, description: '삭제 성공' })
   @ApiResponse({ status: 403, description: '권한 부족' })
   @ApiResponse({ status: 404, description: '강좌 없음' })
@@ -131,16 +126,16 @@ export class CoursesController {
     @Req() req: { user: RequestUser },
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<void> {
-    await this.coursesService.remove(id, req.user.userId, req.user.role);
+    await this.coursesService.remove(id, req.user.userId);
   }
 
   // --- Lecture endpoints ---
 
   @Post(':id/lectures')
   @UseGuards(RolesGuard)
-  @Roles(Role.TUTOR, Role.ADMIN)
+  @Roles(Role.TUTOR)
   @ApiBearerAuth()
-  @ApiOperation({ summary: '강의 생성 (TUTOR, ADMIN)' })
+  @ApiOperation({ summary: '강의 생성 (TUTOR)' })
   @ApiResponse({
     status: 201,
     description: '생성 성공',
@@ -156,7 +151,6 @@ export class CoursesController {
     const lecture = await this.coursesService.createLecture(
       id,
       req.user.userId,
-      req.user.role,
       dto,
     );
     return LectureResponseDto.from(lecture);
@@ -164,9 +158,9 @@ export class CoursesController {
 
   @Patch(':id/lectures/:lid')
   @UseGuards(RolesGuard)
-  @Roles(Role.TUTOR, Role.ADMIN)
+  @Roles(Role.TUTOR)
   @ApiBearerAuth()
-  @ApiOperation({ summary: '강의 수정 (TUTOR, ADMIN)' })
+  @ApiOperation({ summary: '강의 수정 (TUTOR)' })
   @ApiResponse({
     status: 200,
     description: '수정 성공',
@@ -184,7 +178,6 @@ export class CoursesController {
       id,
       lid,
       req.user.userId,
-      req.user.role,
       dto,
     );
     return LectureResponseDto.from(lecture);
@@ -192,10 +185,10 @@ export class CoursesController {
 
   @Delete(':id/lectures/:lid')
   @UseGuards(RolesGuard)
-  @Roles(Role.TUTOR, Role.ADMIN)
+  @Roles(Role.TUTOR)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiBearerAuth()
-  @ApiOperation({ summary: '강의 삭제 (TUTOR, ADMIN)' })
+  @ApiOperation({ summary: '강의 삭제 (TUTOR)' })
   @ApiResponse({ status: 204, description: '삭제 성공' })
   @ApiResponse({ status: 403, description: '권한 부족' })
   @ApiResponse({ status: 404, description: '강좌 또는 강의 없음' })
@@ -204,11 +197,6 @@ export class CoursesController {
     @Param('id', ParseUUIDPipe) id: string,
     @Param('lid', ParseUUIDPipe) lid: string,
   ): Promise<void> {
-    await this.coursesService.removeLecture(
-      id,
-      lid,
-      req.user.userId,
-      req.user.role,
-    );
+    await this.coursesService.removeLecture(id, lid, req.user.userId);
   }
 }

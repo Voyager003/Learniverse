@@ -9,12 +9,13 @@ import {
 import { SubmissionsService } from './submissions.service.js';
 import { Submission } from './schemas/submission.schema.js';
 import { AssignmentsService } from '../assignments/assignments.service.js';
-import { EnrollmentsService } from '../enrollments/enrollments.service.js';
 import { Assignment } from '../assignments/entities/assignment.entity.js';
 import { Course } from '../courses/entities/course.entity.js';
 import { SubmissionStatus, Role } from '../common/enums/index.js';
 import { CreateSubmissionDto } from './dto/create-submission.dto.js';
 import { AddFeedbackDto } from './dto/add-feedback.dto.js';
+import { CourseEnrollmentPolicy } from '../common/policies/course-enrollment.policy.js';
+import { CourseOwnershipPolicy } from '../common/policies/course-ownership.policy.js';
 
 interface MockSubmission {
   _id: string;
@@ -37,7 +38,12 @@ describe('SubmissionsService', () => {
   let service: SubmissionsService;
   let submissionModel: Record<string, jest.Mock>;
   let assignmentsService: Partial<Record<keyof AssignmentsService, jest.Mock>>;
-  let enrollmentsService: Partial<Record<keyof EnrollmentsService, jest.Mock>>;
+  let courseEnrollmentPolicy: Partial<
+    Record<keyof CourseEnrollmentPolicy, jest.Mock>
+  >;
+  let courseOwnershipPolicy: Partial<
+    Record<keyof CourseOwnershipPolicy, jest.Mock>
+  >;
 
   beforeEach(async () => {
     submissionModel = {
@@ -51,8 +57,11 @@ describe('SubmissionsService', () => {
       findOne: jest.fn(),
     };
 
-    enrollmentsService = {
-      isEnrolled: jest.fn(),
+    courseEnrollmentPolicy = {
+      assertStudentEnrolled: jest.fn(),
+    };
+    courseOwnershipPolicy = {
+      assertTutorOwnsCourse: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -67,8 +76,12 @@ describe('SubmissionsService', () => {
           useValue: assignmentsService,
         },
         {
-          provide: EnrollmentsService,
-          useValue: enrollmentsService,
+          provide: CourseEnrollmentPolicy,
+          useValue: courseEnrollmentPolicy,
+        },
+        {
+          provide: CourseOwnershipPolicy,
+          useValue: courseOwnershipPolicy,
         },
       ],
     }).compile();
@@ -99,7 +112,9 @@ describe('SubmissionsService', () => {
       };
 
       assignmentsService.findOne!.mockResolvedValue(mockAssignment);
-      enrollmentsService.isEnrolled!.mockResolvedValue(true);
+      courseEnrollmentPolicy.assertStudentEnrolled!.mockResolvedValue(
+        undefined,
+      );
       submissionModel.findOne.mockResolvedValue(null);
       submissionModel.create.mockResolvedValue(savedDoc);
 
@@ -113,7 +128,7 @@ describe('SubmissionsService', () => {
       expect(assignmentsService.findOne).toHaveBeenCalledWith(
         'assignment-uuid',
       );
-      expect(enrollmentsService.isEnrolled).toHaveBeenCalledWith(
+      expect(courseEnrollmentPolicy.assertStudentEnrolled).toHaveBeenCalledWith(
         'student-uuid',
         'course-uuid',
       );
@@ -121,7 +136,9 @@ describe('SubmissionsService', () => {
 
     it('수강하지 않은 학생이면 ForbiddenException을 던져야 한다', async () => {
       assignmentsService.findOne!.mockResolvedValue(mockAssignment);
-      enrollmentsService.isEnrolled!.mockResolvedValue(false);
+      courseEnrollmentPolicy.assertStudentEnrolled!.mockRejectedValue(
+        new ForbiddenException(),
+      );
 
       await expect(
         service.submit('assignment-uuid', 'student-uuid', dto),
@@ -130,7 +147,9 @@ describe('SubmissionsService', () => {
 
     it('이미 제출한 과제이면 ConflictException을 던져야 한다', async () => {
       assignmentsService.findOne!.mockResolvedValue(mockAssignment);
-      enrollmentsService.isEnrolled!.mockResolvedValue(true);
+      courseEnrollmentPolicy.assertStudentEnrolled!.mockResolvedValue(
+        undefined,
+      );
       submissionModel.findOne.mockResolvedValue({ _id: 'existing' });
 
       await expect(
@@ -140,7 +159,9 @@ describe('SubmissionsService', () => {
 
     it('MongoDB unique index 위반 시 ConflictException을 던져야 한다', async () => {
       assignmentsService.findOne!.mockResolvedValue(mockAssignment);
-      enrollmentsService.isEnrolled!.mockResolvedValue(true);
+      courseEnrollmentPolicy.assertStudentEnrolled!.mockResolvedValue(
+        undefined,
+      );
       submissionModel.findOne.mockResolvedValue(null);
 
       const mongoError = new Error('E11000 duplicate key error');
@@ -166,7 +187,6 @@ describe('SubmissionsService', () => {
         dueDate: new Date('2020-01-01'),
       };
       assignmentsService.findOne!.mockResolvedValue(pastDueAssignment);
-      enrollmentsService.isEnrolled!.mockResolvedValue(true);
 
       await expect(
         service.submit('assignment-uuid', 'student-uuid', dto),
@@ -188,7 +208,9 @@ describe('SubmissionsService', () => {
       };
 
       assignmentsService.findOne!.mockResolvedValue(noDueAssignment);
-      enrollmentsService.isEnrolled!.mockResolvedValue(true);
+      courseEnrollmentPolicy.assertStudentEnrolled!.mockResolvedValue(
+        undefined,
+      );
       submissionModel.findOne.mockResolvedValue(null);
       submissionModel.create.mockResolvedValue(savedDoc);
 
@@ -220,7 +242,9 @@ describe('SubmissionsService', () => {
       };
 
       assignmentsService.findOne!.mockResolvedValue(mockAssignment);
-      enrollmentsService.isEnrolled!.mockResolvedValue(true);
+      courseEnrollmentPolicy.assertStudentEnrolled!.mockResolvedValue(
+        undefined,
+      );
       submissionModel.findOne.mockResolvedValue(null);
       submissionModel.create.mockResolvedValue(savedDoc);
 
@@ -244,6 +268,9 @@ describe('SubmissionsService', () => {
       ];
 
       assignmentsService.findOne!.mockResolvedValue(mockAssignment);
+      courseOwnershipPolicy.assertTutorOwnsCourse!.mockImplementation(() => {
+        // no-op
+      });
       submissionModel.find.mockReturnValue({
         sort: jest.fn().mockReturnValue({
           exec: jest.fn().mockResolvedValue(submissions),
@@ -266,7 +293,9 @@ describe('SubmissionsService', () => {
       const submissions = [{ _id: 's1', studentId: 'student-uuid' }];
 
       assignmentsService.findOne!.mockResolvedValue(mockAssignment);
-      enrollmentsService.isEnrolled!.mockResolvedValue(true);
+      courseEnrollmentPolicy.assertStudentEnrolled!.mockResolvedValue(
+        undefined,
+      );
       submissionModel.find.mockReturnValue({
         sort: jest.fn().mockReturnValue({
           exec: jest.fn().mockResolvedValue(submissions),
@@ -288,7 +317,9 @@ describe('SubmissionsService', () => {
 
     it('수강하지 않은 학생이면 ForbiddenException을 던져야 한다', async () => {
       assignmentsService.findOne!.mockResolvedValue(mockAssignment);
-      enrollmentsService.isEnrolled!.mockResolvedValue(false);
+      courseEnrollmentPolicy.assertStudentEnrolled!.mockRejectedValue(
+        new ForbiddenException(),
+      );
 
       await expect(
         service.findByAssignment(
@@ -301,29 +332,13 @@ describe('SubmissionsService', () => {
 
     it('소유자가 아닌 Tutor이면 ForbiddenException을 던져야 한다', async () => {
       assignmentsService.findOne!.mockResolvedValue(mockAssignment);
+      courseOwnershipPolicy.assertTutorOwnsCourse!.mockImplementation(() => {
+        throw new ForbiddenException();
+      });
 
       await expect(
         service.findByAssignment('assignment-uuid', 'other-tutor', Role.TUTOR),
       ).rejects.toThrow(ForbiddenException);
-    });
-
-    it('ADMIN은 모든 제출을 조회할 수 있어야 한다', async () => {
-      const submissions = [{ _id: 's1' }];
-
-      assignmentsService.findOne!.mockResolvedValue(mockAssignment);
-      submissionModel.find.mockReturnValue({
-        sort: jest.fn().mockReturnValue({
-          exec: jest.fn().mockResolvedValue(submissions),
-        }),
-      });
-
-      const result = await service.findByAssignment(
-        'assignment-uuid',
-        'admin-uuid',
-        Role.ADMIN,
-      );
-
-      expect(result).toEqual(submissions);
     });
   });
 
@@ -358,7 +373,6 @@ describe('SubmissionsService', () => {
         'submission-id',
         'assignment-uuid',
         'tutor-uuid',
-        Role.TUTOR,
         feedbackDto,
       );
 
@@ -385,7 +399,6 @@ describe('SubmissionsService', () => {
         'submission-id',
         'assignment-uuid',
         'tutor-uuid',
-        Role.TUTOR,
         {
           feedback: '수정이 필요합니다.',
         },
@@ -403,13 +416,15 @@ describe('SubmissionsService', () => {
 
       assignmentsService.findOne!.mockResolvedValue(mockAssignment);
       submissionModel.findById.mockResolvedValue(submission);
+      courseOwnershipPolicy.assertTutorOwnsCourse!.mockImplementation(() => {
+        throw new ForbiddenException();
+      });
 
       await expect(
         service.addFeedback(
           'submission-id',
           'assignment-uuid',
           'other-tutor',
-          Role.TUTOR,
           feedbackDto,
         ),
       ).rejects.toThrow(ForbiddenException);
@@ -423,7 +438,6 @@ describe('SubmissionsService', () => {
           'nonexistent',
           'assignment-uuid',
           'tutor-uuid',
-          Role.TUTOR,
           feedbackDto,
         ),
       ).rejects.toThrow(NotFoundException);
@@ -445,7 +459,6 @@ describe('SubmissionsService', () => {
           'submission-id',
           'assignment-uuid',
           'tutor-uuid',
-          Role.TUTOR,
           feedbackDto,
         ),
       ).rejects.toThrow(ConflictException);
@@ -468,7 +481,6 @@ describe('SubmissionsService', () => {
         'submission-id',
         'assignment-uuid',
         'tutor-uuid',
-        Role.TUTOR,
         feedbackDto,
       );
 
@@ -491,34 +503,9 @@ describe('SubmissionsService', () => {
           'submission-id',
           'assignment-uuid',
           'tutor-uuid',
-          Role.TUTOR,
           feedbackDto,
         ),
       ).rejects.toThrow(BadRequestException);
-    });
-
-    it('ADMIN은 피드백을 추가할 수 있어야 한다', async () => {
-      const submission: MockSubmission = {
-        _id: 'submission-id',
-        assignmentId: 'assignment-uuid',
-        studentId: 'student-uuid',
-        status: SubmissionStatus.SUBMITTED,
-        save: jest.fn(),
-      };
-
-      assignmentsService.findOne!.mockResolvedValue(mockAssignment);
-      submissionModel.findById.mockResolvedValue(submission);
-      submission.save.mockResolvedValue(submission);
-
-      await service.addFeedback(
-        'submission-id',
-        'assignment-uuid',
-        'admin-uuid',
-        Role.ADMIN,
-        feedbackDto,
-      );
-
-      expect(submission.save).toHaveBeenCalled();
     });
   });
 });

@@ -1,17 +1,17 @@
 import {
   Injectable,
   NotFoundException,
-  ForbiddenException,
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Assignment } from './entities/assignment.entity.js';
 import { Course } from '../courses/entities/course.entity.js';
-import { EnrollmentsService } from '../enrollments/enrollments.service.js';
 import { CreateAssignmentDto } from './dto/create-assignment.dto.js';
 import { Role } from '../common/enums/index.js';
 import { ERROR_MESSAGES } from '../common/constants/error-messages.constant.js';
+import { CourseEnrollmentPolicy } from '../common/policies/course-enrollment.policy.js';
+import { CourseOwnershipPolicy } from '../common/policies/course-ownership.policy.js';
 
 @Injectable()
 export class AssignmentsService {
@@ -20,30 +20,19 @@ export class AssignmentsService {
     private readonly assignmentRepository: Repository<Assignment>,
     @InjectRepository(Course)
     private readonly courseRepository: Repository<Course>,
-    private readonly enrollmentsService: EnrollmentsService,
+    private readonly courseEnrollmentPolicy: CourseEnrollmentPolicy,
+    private readonly courseOwnershipPolicy: CourseOwnershipPolicy,
   ) {}
 
   async create(
     courseId: string,
     userId: string,
-    role: Role,
     dto: CreateAssignmentDto,
   ): Promise<Assignment> {
     const course = await this.findCourseOrFail(courseId);
-    this.verifyOwnership(course, userId, role);
-
-    // H-1: Validate dueDate is not in the past
-    if (dto.dueDate && new Date(dto.dueDate) < new Date()) {
-      throw new BadRequestException(ERROR_MESSAGES.DUE_DATE_IN_PAST);
-    }
-
-    const assignment = this.assignmentRepository.create({
-      title: dto.title,
-      description: dto.description,
-      courseId,
-      dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
-    });
-
+    this.courseOwnershipPolicy.assertTutorOwnsCourse(course.tutorId, userId);
+    this.validateDueDate(dto.dueDate);
+    const assignment = this.createAssignmentEntity(courseId, dto);
     return this.assignmentRepository.save(assignment);
   }
 
@@ -53,23 +42,7 @@ export class AssignmentsService {
     role: Role,
   ): Promise<Assignment[]> {
     const course = await this.findCourseOrFail(courseId);
-
-    if (role === Role.ADMIN) {
-      // ADMIN can access all courses
-    } else if (role === Role.TUTOR) {
-      if (course.tutorId !== userId) {
-        throw new ForbiddenException(ERROR_MESSAGES.NOT_COURSE_OWNER);
-      }
-    } else {
-      // STUDENT: verify enrollment
-      const enrolled = await this.enrollmentsService.isEnrolled(
-        userId,
-        courseId,
-      );
-      if (!enrolled) {
-        throw new ForbiddenException(ERROR_MESSAGES.NOT_ENROLLED_IN_COURSE);
-      }
-    }
+    await this.authorizeCourseReader(course, userId, role);
 
     return this.assignmentRepository.find({
       where: { courseId },
@@ -103,10 +76,35 @@ export class AssignmentsService {
     return course;
   }
 
-  private verifyOwnership(course: Course, userId: string, role: Role): void {
-    if (role === Role.ADMIN) return;
-    if (course.tutorId !== userId) {
-      throw new ForbiddenException(ERROR_MESSAGES.NOT_COURSE_OWNER);
+  private async authorizeCourseReader(
+    course: Pick<Course, 'id' | 'tutorId'>,
+    userId: string,
+    role: Role,
+  ): Promise<void> {
+    if (role === Role.TUTOR) {
+      this.courseOwnershipPolicy.assertTutorOwnsCourse(course.tutorId, userId);
+      return;
     }
+
+    await this.courseEnrollmentPolicy.assertStudentEnrolled(userId, course.id);
+  }
+
+  private validateDueDate(dueDate?: string): void {
+    // H-1: Validate dueDate is not in the past
+    if (dueDate && new Date(dueDate) < new Date()) {
+      throw new BadRequestException(ERROR_MESSAGES.DUE_DATE_IN_PAST);
+    }
+  }
+
+  private createAssignmentEntity(
+    courseId: string,
+    dto: CreateAssignmentDto,
+  ): Assignment {
+    return this.assignmentRepository.create({
+      title: dto.title,
+      description: dto.description,
+      courseId,
+      dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
+    });
   }
 }

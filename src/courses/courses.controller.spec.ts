@@ -156,7 +156,6 @@ describe('CoursesController', () => {
       expect(coursesService.update).toHaveBeenCalledWith(
         'course-uuid',
         'tutor-uuid',
-        Role.TUTOR,
         { title: 'Updated' },
       );
     });
@@ -179,7 +178,6 @@ describe('CoursesController', () => {
       expect(coursesService.remove).toHaveBeenCalledWith(
         'course-uuid',
         'tutor-uuid',
-        Role.TUTOR,
       );
     });
 
@@ -210,7 +208,6 @@ describe('CoursesController', () => {
       expect(coursesService.createLecture).toHaveBeenCalledWith(
         'course-uuid',
         'tutor-uuid',
-        Role.TUTOR,
         dto,
       );
     });
@@ -246,7 +243,6 @@ describe('CoursesController', () => {
         'course-uuid',
         'lecture-uuid',
         'tutor-uuid',
-        Role.TUTOR,
         { title: 'Updated' },
       );
     });
@@ -276,7 +272,6 @@ describe('CoursesController', () => {
         'course-uuid',
         'lecture-uuid',
         'tutor-uuid',
-        Role.TUTOR,
       );
     });
 

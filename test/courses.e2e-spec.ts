@@ -15,6 +15,14 @@ import {
   AuthTokens,
   PaginatedData,
 } from './helpers/test-interfaces';
+import {
+  expectErrorEnvelope,
+  expectSuccessEnvelope,
+} from './helpers/assert-response';
+import {
+  assertCoursePublishedState,
+  assertLectureCountByCourseAndOrder,
+} from './helpers/db-assertions';
 
 interface CourseData {
   id: string;
@@ -71,7 +79,8 @@ describe('Courses & Lectures (e2e)', () => {
     const tutorLogin = await request(app.getHttpServer())
       .post('/api/v1/auth/login')
       .send({ email: 'courses-tutor@test.com', password: 'password123' });
-    tutorToken = (tutorLogin.body as SuccessBody<AuthTokens>).data.accessToken;
+    tutorToken = expectSuccessEnvelope<AuthTokens>(tutorLogin, 200).data
+      .accessToken;
 
     // 2. Register other TUTOR + promote + login
     await request(app.getHttpServer()).post('/api/v1/auth/register').send({
@@ -88,8 +97,8 @@ describe('Courses & Lectures (e2e)', () => {
         email: 'courses-other-tutor@test.com',
         password: 'password123',
       });
-    otherTutorToken = (otherTutorLogin.body as SuccessBody<AuthTokens>).data
-      .accessToken;
+    otherTutorToken = expectSuccessEnvelope<AuthTokens>(otherTutorLogin, 200)
+      .data.accessToken;
 
     // 3. Register STUDENT + login
     await request(app.getHttpServer()).post('/api/v1/auth/register').send({
@@ -101,7 +110,7 @@ describe('Courses & Lectures (e2e)', () => {
     const studentLogin = await request(app.getHttpServer())
       .post('/api/v1/auth/login')
       .send({ email: 'courses-student@test.com', password: 'password123' });
-    studentToken = (studentLogin.body as SuccessBody<AuthTokens>).data
+    studentToken = expectSuccessEnvelope<AuthTokens>(studentLogin, 200).data
       .accessToken;
   });
 
@@ -132,6 +141,7 @@ describe('Courses & Lectures (e2e)', () => {
       expect(body.data.isPublished).toBe(false);
       expect(body.data.id).toBeDefined();
       courseId = body.data.id;
+      await assertCoursePublishedState(dataSource, courseId, false);
     });
 
     it('필수 필드 누락 시 400을 반환한다', async () => {
@@ -322,6 +332,7 @@ describe('Courses & Lectures (e2e)', () => {
 
       const body = res.body as SuccessBody<CourseData>;
       expect(body.data.isPublished).toBe(true);
+      await assertCoursePublishedState(dataSource, newCourseId, true);
     });
 
     it('다른 TUTOR가 수정하면 403을 반환한다', async () => {
@@ -331,7 +342,11 @@ describe('Courses & Lectures (e2e)', () => {
         .send({ title: 'Hijacked' })
         .expect(403);
 
-      const body = res.body as ErrorBody;
+      const body = expectErrorEnvelope(
+        res,
+        403,
+        ERROR_MESSAGES.NOT_COURSE_OWNER,
+      );
       expect(body.message).toBe(ERROR_MESSAGES.NOT_COURSE_OWNER);
     });
 
@@ -439,6 +454,37 @@ describe('Courses & Lectures (e2e)', () => {
 
       const body = res.body as ErrorBody;
       expect(body.message).toContain('order');
+    });
+
+    it('동일 order 생성 요청을 동시에 보내면 1건만 생성되고 나머지는 409다', async () => {
+      const lectureOrder = 999;
+      const [r1, r2] = await Promise.all([
+        request(app.getHttpServer())
+          .post(`/api/v1/courses/${courseId}/lectures`)
+          .set('Authorization', `Bearer ${tutorToken}`)
+          .send({
+            title: 'Concurrency Lecture A',
+            content: 'Race condition test',
+            order: lectureOrder,
+          }),
+        request(app.getHttpServer())
+          .post(`/api/v1/courses/${courseId}/lectures`)
+          .set('Authorization', `Bearer ${tutorToken}`)
+          .send({
+            title: 'Concurrency Lecture B',
+            content: 'Race condition test',
+            order: lectureOrder,
+          }),
+      ]);
+
+      const statuses = [r1.status, r2.status].sort((a, b) => a - b);
+      expect(statuses).toEqual([201, 409]);
+      await assertLectureCountByCourseAndOrder(
+        dataSource,
+        courseId,
+        lectureOrder,
+        1,
+      );
     });
 
     it('다른 TUTOR가 강의를 생성하면 403을 반환한다', async () => {

@@ -12,7 +12,6 @@ const createMockRepository = (): MockRepository => ({
   findOne: jest.fn(),
   create: jest.fn(),
   save: jest.fn(),
-  find: jest.fn(),
 });
 
 describe('UsersService', () => {
@@ -168,21 +167,6 @@ describe('UsersService', () => {
       await expect(
         service.update('nonexistent', { name: 'New Name' }),
       ).rejects.toThrow(NotFoundException);
-    });
-  });
-
-  describe('findAll', () => {
-    it('모든 사용자를 반환해야 한다', async () => {
-      const users = [
-        { id: 'uuid-1', email: 'a@example.com' },
-        { id: 'uuid-2', email: 'b@example.com' },
-      ] as User[];
-      repository.find!.mockResolvedValue(users);
-
-      const result = await service.findAll();
-
-      expect(result).toHaveLength(2);
-      expect(repository.find).toHaveBeenCalled();
     });
   });
 

@@ -172,7 +172,6 @@ describe('SubmissionsController', () => {
         'submission-id',
         'assignment-uuid',
         'tutor-uuid',
-        Role.TUTOR,
         dto,
       );
     });

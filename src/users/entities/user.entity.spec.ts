@@ -23,13 +23,6 @@ describe('User 엔티티', () => {
     expect(user.role).toBe(Role.TUTOR);
   });
 
-  it('역할을 ADMIN으로 설정할 수 있어야 한다', () => {
-    const user = new User();
-    user.role = Role.ADMIN;
-
-    expect(user.role).toBe(Role.ADMIN);
-  });
-
   it('refreshToken을 설정할 수 있어야 한다', () => {
     const user = new User();
     user.refreshToken = 'some-hashed-token';
