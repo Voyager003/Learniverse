@@ -53,30 +53,8 @@ export class SubmissionsService {
       assignment.courseId,
     );
 
-    // C-2: Check for duplicate submission (app-level)
-    const existing = await this.submissionModel.findOne({
-      assignmentId,
-      studentId,
-    });
-    if (existing) {
-      throw new ConflictException(ERROR_MESSAGES.ALREADY_SUBMITTED);
-    }
-
-    // C-1: Handle MongoDB unique index violation (race condition safety)
-    try {
-      return await this.submissionModel.create({
-        studentId,
-        assignmentId,
-        content: dto.content,
-        fileUrls: dto.fileUrls ?? [],
-      });
-    } catch (error: unknown) {
-      const mongoError = error as MongoError;
-      if (mongoError.code === 11000) {
-        throw new ConflictException(ERROR_MESSAGES.ALREADY_SUBMITTED);
-      }
-      throw error;
-    }
+    await this.assertNoDuplicateSubmission(assignmentId, studentId);
+    return this.createSubmissionSafely(assignmentId, studentId, dto);
   }
 
   async findByAssignment(
@@ -158,5 +136,42 @@ export class SubmissionsService {
     await this.courseEnrollmentPolicy.assertStudentEnrolled(userId, courseId);
     filter.studentId = userId;
     return filter;
+  }
+
+  private async assertNoDuplicateSubmission(
+    assignmentId: string,
+    studentId: string,
+  ): Promise<void> {
+    // C-2: Check for duplicate submission (app-level)
+    const existing = await this.submissionModel.findOne({
+      assignmentId,
+      studentId,
+    });
+
+    if (existing) {
+      throw new ConflictException(ERROR_MESSAGES.ALREADY_SUBMITTED);
+    }
+  }
+
+  private async createSubmissionSafely(
+    assignmentId: string,
+    studentId: string,
+    dto: CreateSubmissionDto,
+  ): Promise<SubmissionDocument> {
+    // C-1: Handle MongoDB unique index violation (race condition safety)
+    try {
+      return await this.submissionModel.create({
+        studentId,
+        assignmentId,
+        content: dto.content,
+        fileUrls: dto.fileUrls ?? [],
+      });
+    } catch (error: unknown) {
+      const mongoError = error as MongoError;
+      if (mongoError.code === 11000) {
+        throw new ConflictException(ERROR_MESSAGES.ALREADY_SUBMITTED);
+      }
+      throw error;
+    }
   }
 }
