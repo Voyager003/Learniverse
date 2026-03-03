@@ -8,6 +8,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Submission, SubmissionDocument } from './schemas/submission.schema.js';
 import { AssignmentsService } from '../assignments/assignments.service.js';
+import { Assignment } from '../assignments/entities/assignment.entity.js';
 import { CreateSubmissionDto } from './dto/create-submission.dto.js';
 import { AddFeedbackDto } from './dto/add-feedback.dto.js';
 import { SubmissionStatus, Role } from '../common/enums/index.js';
@@ -22,6 +23,12 @@ interface MongoError extends Error {
 interface SubmissionFilter {
   assignmentId: string;
   studentId?: string;
+}
+
+interface SubmissionReaderContext {
+  assignmentId: string;
+  courseId: string;
+  courseTutorId: string;
 }
 
 @Injectable()
@@ -63,13 +70,8 @@ export class SubmissionsService {
     role: Role,
   ): Promise<SubmissionDocument[]> {
     const assignment = await this.assignmentsService.findOne(assignmentId);
-    const filter = await this.buildFilterForReader(
-      assignmentId,
-      assignment.courseId,
-      assignment.course.tutorId,
-      userId,
-      role,
-    );
+    const readerContext = this.buildReaderContext(assignment);
+    const filter = await this.buildFilterForReader(readerContext, userId, role);
 
     return this.submissionModel.find(filter).sort({ createdAt: -1 }).exec();
   }
@@ -99,22 +101,34 @@ export class SubmissionsService {
   }
 
   private async buildFilterForReader(
-    assignmentId: string,
-    courseId: string,
-    courseTutorId: string,
+    context: SubmissionReaderContext,
     userId: string,
     role: Role,
   ): Promise<SubmissionFilter> {
-    const filter: SubmissionFilter = { assignmentId };
+    const filter: SubmissionFilter = { assignmentId: context.assignmentId };
 
     if (role === Role.TUTOR) {
-      this.courseOwnershipPolicy.assertTutorOwnsCourse(courseTutorId, userId);
+      this.courseOwnershipPolicy.assertTutorOwnsCourse(
+        context.courseTutorId,
+        userId,
+      );
       return filter;
     }
 
-    await this.courseEnrollmentPolicy.assertStudentEnrolled(userId, courseId);
+    await this.courseEnrollmentPolicy.assertStudentEnrolled(
+      userId,
+      context.courseId,
+    );
     filter.studentId = userId;
     return filter;
+  }
+
+  private buildReaderContext(assignment: Assignment): SubmissionReaderContext {
+    return {
+      assignmentId: assignment.id,
+      courseId: assignment.courseId,
+      courseTutorId: assignment.course.tutorId,
+    };
   }
 
   private async assertNoDuplicateSubmission(
