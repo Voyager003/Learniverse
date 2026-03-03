@@ -6,6 +6,7 @@ import { SubmissionsController } from './submissions.controller.js';
 import { AssignmentsModule } from '../assignments/assignments.module.js';
 import { EnrollmentsModule } from '../enrollments/enrollments.module.js';
 import { SubmissionAccessPolicy } from './policies/submission-access.policy.js';
+import { CourseEnrollmentPolicy } from '../common/policies/course-enrollment.policy.js';
 import { CourseOwnershipPolicy } from '../common/policies/course-ownership.policy.js';
 
 @Module({
@@ -20,6 +21,7 @@ import { CourseOwnershipPolicy } from '../common/policies/course-ownership.polic
   providers: [
     SubmissionsService,
     SubmissionAccessPolicy,
+    CourseEnrollmentPolicy,
     CourseOwnershipPolicy,
   ],
 })

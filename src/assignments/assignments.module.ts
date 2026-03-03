@@ -6,6 +6,7 @@ import { AssignmentsService } from './assignments.service.js';
 import { AssignmentsController } from './assignments.controller.js';
 import { EnrollmentsModule } from '../enrollments/enrollments.module.js';
 import { AssignmentAccessPolicy } from './policies/assignment-access.policy.js';
+import { CourseEnrollmentPolicy } from '../common/policies/course-enrollment.policy.js';
 import { CourseOwnershipPolicy } from '../common/policies/course-ownership.policy.js';
 
 @Module({
@@ -14,6 +15,7 @@ import { CourseOwnershipPolicy } from '../common/policies/course-ownership.polic
   providers: [
     AssignmentsService,
     AssignmentAccessPolicy,
+    CourseEnrollmentPolicy,
     CourseOwnershipPolicy,
   ],
   exports: [AssignmentsService],

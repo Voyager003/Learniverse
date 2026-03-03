@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AssignmentAccessPolicy } from './assignment-access.policy.js';
 import { EnrollmentsService } from '../../enrollments/enrollments.service.js';
 import { Role } from '../../common/enums/index.js';
+import { CourseEnrollmentPolicy } from '../../common/policies/course-enrollment.policy.js';
 import { CourseOwnershipPolicy } from '../../common/policies/course-ownership.policy.js';
 
 describe('AssignmentAccessPolicy', () => {
@@ -17,6 +18,7 @@ describe('AssignmentAccessPolicy', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AssignmentAccessPolicy,
+        CourseEnrollmentPolicy,
         CourseOwnershipPolicy,
         {
           provide: EnrollmentsService,

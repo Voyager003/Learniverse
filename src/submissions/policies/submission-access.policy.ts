@@ -1,7 +1,6 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
-import { EnrollmentsService } from '../../enrollments/enrollments.service.js';
+import { Injectable } from '@nestjs/common';
 import { Role } from '../../common/enums/index.js';
-import { ERROR_MESSAGES } from '../../common/constants/error-messages.constant.js';
+import { CourseEnrollmentPolicy } from '../../common/policies/course-enrollment.policy.js';
 import { CourseOwnershipPolicy } from '../../common/policies/course-ownership.policy.js';
 
 export interface SubmissionFilter {
@@ -20,7 +19,7 @@ export interface BuildSubmissionFilterInput {
 @Injectable()
 export class SubmissionAccessPolicy {
   constructor(
-    private readonly enrollmentsService: EnrollmentsService,
+    private readonly courseEnrollmentPolicy: CourseEnrollmentPolicy,
     private readonly courseOwnershipPolicy: CourseOwnershipPolicy,
   ) {}
 
@@ -32,13 +31,10 @@ export class SubmissionAccessPolicy {
     studentId: string,
     courseId: string,
   ): Promise<void> {
-    const enrolled = await this.enrollmentsService.isEnrolled(
+    await this.courseEnrollmentPolicy.assertStudentEnrolled(
       studentId,
       courseId,
     );
-    if (!enrolled) {
-      throw new ForbiddenException(ERROR_MESSAGES.NOT_ENROLLED_IN_COURSE);
-    }
   }
 
   async buildSubmissionFilter(
