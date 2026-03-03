@@ -20,7 +20,7 @@ import { UpdateCourseDto } from './dto/update-course.dto.js';
 import { CourseQueryDto } from './dto/course-query.dto.js';
 import { CreateLectureDto } from './dto/create-lecture.dto.js';
 import { UpdateLectureDto } from './dto/update-lecture.dto.js';
-import { CourseAccessPolicy } from './policies/course-access.policy.js';
+import { CourseOwnershipPolicy } from '../common/policies/course-ownership.policy.js';
 
 type MockRepository<T extends ObjectLiteral> = Partial<
   Record<keyof Repository<T>, jest.Mock>
@@ -40,12 +40,14 @@ describe('CoursesService', () => {
   let service: CoursesService;
   let courseRepository: MockRepository<Course>;
   let lectureRepository: MockRepository<Lecture>;
-  let courseAccessPolicy: Partial<Record<keyof CourseAccessPolicy, jest.Mock>>;
+  let courseOwnershipPolicy: Partial<
+    Record<keyof CourseOwnershipPolicy, jest.Mock>
+  >;
 
   beforeEach(async () => {
     courseRepository = createMockRepository<Course>();
     lectureRepository = createMockRepository<Lecture>();
-    courseAccessPolicy = {
+    courseOwnershipPolicy = {
       assertTutorOwnsCourse: jest.fn(
         (courseTutorId: string, userId: string) => {
           if (courseTutorId !== userId) {
@@ -67,8 +69,8 @@ describe('CoursesService', () => {
           useValue: lectureRepository,
         },
         {
-          provide: CourseAccessPolicy,
-          useValue: courseAccessPolicy,
+          provide: CourseOwnershipPolicy,
+          useValue: courseOwnershipPolicy,
         },
       ],
     }).compile();
@@ -262,7 +264,7 @@ describe('CoursesService', () => {
       const result = await service.update('course-uuid', 'tutor-uuid', dto);
 
       expect(result.title).toBe('New');
-      expect(courseAccessPolicy.assertTutorOwnsCourse).toHaveBeenCalledWith(
+      expect(courseOwnershipPolicy.assertTutorOwnsCourse).toHaveBeenCalledWith(
         'tutor-uuid',
         'tutor-uuid',
       );
@@ -350,7 +352,7 @@ describe('CoursesService', () => {
         ...dto,
         courseId: 'course-uuid',
       });
-      expect(courseAccessPolicy.assertTutorOwnsCourse).toHaveBeenCalledWith(
+      expect(courseOwnershipPolicy.assertTutorOwnsCourse).toHaveBeenCalledWith(
         'tutor-uuid',
         'tutor-uuid',
       );

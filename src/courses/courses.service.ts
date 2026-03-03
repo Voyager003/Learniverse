@@ -14,7 +14,7 @@ import { CreateLectureDto } from './dto/create-lecture.dto.js';
 import { UpdateLectureDto } from './dto/update-lecture.dto.js';
 import { PaginatedResponseDto } from '../common/dto/paginated-response.dto.js';
 import { ERROR_MESSAGES } from '../common/constants/error-messages.constant.js';
-import { CourseAccessPolicy } from './policies/course-access.policy.js';
+import { CourseOwnershipPolicy } from '../common/policies/course-ownership.policy.js';
 
 const UNIQUE_VIOLATION_CODE = '23505';
 
@@ -25,7 +25,7 @@ export class CoursesService {
     private readonly courseRepository: Repository<Course>,
     @InjectRepository(Lecture)
     private readonly lectureRepository: Repository<Lecture>,
-    private readonly courseAccessPolicy: CourseAccessPolicy,
+    private readonly courseOwnershipPolicy: CourseOwnershipPolicy,
   ) {}
 
   // --- Course CRUD ---
@@ -147,7 +147,7 @@ export class CoursesService {
       throw new NotFoundException(ERROR_MESSAGES.COURSE_NOT_FOUND);
     }
 
-    this.courseAccessPolicy.assertTutorOwnsCourse(course.tutorId, userId);
+    this.courseOwnershipPolicy.assertTutorOwnsCourse(course.tutorId, userId);
 
     return course;
   }
