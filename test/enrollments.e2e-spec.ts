@@ -15,6 +15,16 @@ import {
   AuthTokens,
   PaginatedData,
 } from './helpers/test-interfaces';
+import {
+  expectErrorEnvelope,
+  expectSuccessEnvelope,
+} from './helpers/assert-response';
+import {
+  assertEnrollmentCount,
+  assertEnrollmentState,
+  getUserIdByEmail,
+} from './helpers/db-assertions';
+import { EnrollmentStatus } from '../src/common/enums';
 
 interface EnrollmentData {
   id: string;
@@ -43,6 +53,8 @@ describe('Enrollments (e2e)', () => {
   let publishedCourseId: string;
   let unpublishedCourseId: string;
   let enrollmentId: string;
+  let studentId: string;
+  let freshStudentId: string;
 
   beforeAll(async () => {
     ctx = await createTestApp();
@@ -63,7 +75,8 @@ describe('Enrollments (e2e)', () => {
     const tutorLogin = await request(app.getHttpServer())
       .post('/api/v1/auth/login')
       .send({ email: 'enroll-tutor@test.com', password: 'password123' });
-    tutorToken = (tutorLogin.body as SuccessBody<AuthTokens>).data.accessToken;
+    tutorToken = expectSuccessEnvelope<AuthTokens>(tutorLogin, 200).data
+      .accessToken;
 
     // 2. Create published course
     const courseRes = await request(app.getHttpServer())
@@ -105,8 +118,9 @@ describe('Enrollments (e2e)', () => {
     const studentLogin = await request(app.getHttpServer())
       .post('/api/v1/auth/login')
       .send({ email: 'enroll-student@test.com', password: 'password123' });
-    studentToken = (studentLogin.body as SuccessBody<AuthTokens>).data
+    studentToken = expectSuccessEnvelope<AuthTokens>(studentLogin, 200).data
       .accessToken;
+    studentId = await getUserIdByEmail(dataSource, 'enroll-student@test.com');
 
     // 5. Register fresh STUDENT (no enrollments) + login
     await request(app.getHttpServer()).post('/api/v1/auth/register').send({
@@ -118,8 +132,12 @@ describe('Enrollments (e2e)', () => {
     const freshLogin = await request(app.getHttpServer())
       .post('/api/v1/auth/login')
       .send({ email: 'enroll-fresh@test.com', password: 'password123' });
-    freshStudentToken = (freshLogin.body as SuccessBody<AuthTokens>).data
+    freshStudentToken = expectSuccessEnvelope<AuthTokens>(freshLogin, 200).data
       .accessToken;
+    freshStudentId = await getUserIdByEmail(
+      dataSource,
+      'enroll-fresh@test.com',
+    );
   });
 
   afterAll(async () => {
@@ -141,6 +159,13 @@ describe('Enrollments (e2e)', () => {
       expect(body.data.status).toBe('active');
       expect(body.data.progress).toBe(0);
       enrollmentId = body.data.id;
+      await assertEnrollmentState(
+        dataSource,
+        studentId,
+        publishedCourseId,
+        EnrollmentStatus.ACTIVE,
+        0,
+      );
     });
 
     it('동일 강좌에 중복 등록하면 409를 반환한다', async () => {
@@ -150,8 +175,48 @@ describe('Enrollments (e2e)', () => {
         .send({ courseId: publishedCourseId })
         .expect(409);
 
-      const body = res.body as ErrorBody;
+      const body = expectErrorEnvelope(
+        res,
+        409,
+        ERROR_MESSAGES.ALREADY_ENROLLED,
+      );
       expect(body.message).toBe(ERROR_MESSAGES.ALREADY_ENROLLED);
+    });
+
+    it('동일 강좌 등록 요청을 동시에 보내면 1건만 성공한다', async () => {
+      const raceCourseRes = await request(app.getHttpServer())
+        .post('/api/v1/courses')
+        .set('Authorization', `Bearer ${tutorToken}`)
+        .send({
+          title: 'Enrollment Race Course',
+          description: 'for concurrency test',
+          category: 'programming',
+          difficulty: 'beginner',
+        })
+        .expect(201);
+      const raceCourseId = (raceCourseRes.body as SuccessBody<CourseData>).data
+        .id;
+
+      await request(app.getHttpServer())
+        .patch(`/api/v1/courses/${raceCourseId}`)
+        .set('Authorization', `Bearer ${tutorToken}`)
+        .send({ isPublished: true })
+        .expect(200);
+
+      const [r1, r2] = await Promise.all([
+        request(app.getHttpServer())
+          .post('/api/v1/enrollments')
+          .set('Authorization', `Bearer ${freshStudentToken}`)
+          .send({ courseId: raceCourseId }),
+        request(app.getHttpServer())
+          .post('/api/v1/enrollments')
+          .set('Authorization', `Bearer ${freshStudentToken}`)
+          .send({ courseId: raceCourseId }),
+      ]);
+
+      const statuses = [r1.status, r2.status].sort((a, b) => a - b);
+      expect(statuses).toEqual([201, 409]);
+      await assertEnrollmentCount(dataSource, freshStudentId, raceCourseId, 1);
     });
 
     it('존재하지 않는 강좌에 등록하면 404를 반환한다', async () => {
@@ -282,6 +347,13 @@ describe('Enrollments (e2e)', () => {
       const body = res.body as SuccessBody<EnrollmentData>;
       expect(body.data.progress).toBe(100);
       expect(body.data.status).toBe('completed');
+      await assertEnrollmentState(
+        dataSource,
+        studentId,
+        publishedCourseId,
+        EnrollmentStatus.COMPLETED,
+        100,
+      );
     });
 
     it('COMPLETED 상태에서 진행률을 업데이트하면 400을 반환한다', async () => {
@@ -291,7 +363,11 @@ describe('Enrollments (e2e)', () => {
         .send({ progress: 80 })
         .expect(400);
 
-      const body = res.body as ErrorBody;
+      const body = expectErrorEnvelope(
+        res,
+        400,
+        ERROR_MESSAGES.ENROLLMENT_NOT_ACTIVE,
+      );
       expect(body.message).toBe(ERROR_MESSAGES.ENROLLMENT_NOT_ACTIVE);
     });
 

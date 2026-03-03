@@ -35,3 +35,7 @@ jobs:
 
       - name: Build application
         run: npm run build
+
+      - name: Run e2e smoke tests (PR only)
+        if: github.event_name == 'pull_request'
+        run: npm run test:e2e:smoke

@@ -109,11 +109,7 @@ export class CoursesController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateCourseDto,
   ): Promise<CourseResponseDto> {
-    const course = await this.coursesService.update(
-      id,
-      req.user.userId,
-      dto,
-    );
+    const course = await this.coursesService.update(id, req.user.userId, dto);
     return CourseResponseDto.from(course);
   }
 
@@ -201,10 +197,6 @@ export class CoursesController {
     @Param('id', ParseUUIDPipe) id: string,
     @Param('lid', ParseUUIDPipe) lid: string,
   ): Promise<void> {
-    await this.coursesService.removeLecture(
-      id,
-      lid,
-      req.user.userId,
-    );
+    await this.coursesService.removeLecture(id, lid, req.user.userId);
   }
 }

@@ -138,7 +138,7 @@ export class SubmissionsService {
     }
   }
 
-  private assertSubmissionWithinDeadline(dueDate?: Date): void {
+  private assertSubmissionWithinDeadline(dueDate?: Date | null): void {
     // H-2: Check submission deadline
     if (dueDate && new Date() > dueDate) {
       throw new BadRequestException(ERROR_MESSAGES.SUBMISSION_DEADLINE_PASSED);
@@ -150,7 +150,10 @@ export class SubmissionsService {
     courseId: string,
   ): Promise<void> {
     // Verify student is enrolled
-    await this.courseEnrollmentPolicy.assertStudentEnrolled(studentId, courseId);
+    await this.courseEnrollmentPolicy.assertStudentEnrolled(
+      studentId,
+      courseId,
+    );
   }
 
   private async createSubmissionSafely(
