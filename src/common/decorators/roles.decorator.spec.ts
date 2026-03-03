@@ -17,7 +17,10 @@ describe('Roles 데코레이터', () => {
   });
 
   it('ROLES_KEY와 제공된 역할로 SetMetadata를 호출해야 한다', () => {
-    Roles(Role.ADMIN, Role.TUTOR);
-    expect(SetMetadata).toHaveBeenCalledWith('roles', [Role.ADMIN, Role.TUTOR]);
+    Roles(Role.STUDENT, Role.TUTOR);
+    expect(SetMetadata).toHaveBeenCalledWith('roles', [
+      Role.STUDENT,
+      Role.TUTOR,
+    ]);
   });
 });
