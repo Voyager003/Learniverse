@@ -1,7 +1,6 @@
 import {
   Injectable,
   NotFoundException,
-  ForbiddenException,
   ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -15,6 +14,7 @@ import { CreateLectureDto } from './dto/create-lecture.dto.js';
 import { UpdateLectureDto } from './dto/update-lecture.dto.js';
 import { PaginatedResponseDto } from '../common/dto/paginated-response.dto.js';
 import { ERROR_MESSAGES } from '../common/constants/error-messages.constant.js';
+import { CourseAccessPolicy } from './policies/course-access.policy.js';
 
 const UNIQUE_VIOLATION_CODE = '23505';
 
@@ -25,6 +25,7 @@ export class CoursesService {
     private readonly courseRepository: Repository<Course>,
     @InjectRepository(Lecture)
     private readonly lectureRepository: Repository<Lecture>,
+    private readonly courseAccessPolicy: CourseAccessPolicy,
   ) {}
 
   // --- Course CRUD ---
@@ -146,9 +147,7 @@ export class CoursesService {
       throw new NotFoundException(ERROR_MESSAGES.COURSE_NOT_FOUND);
     }
 
-    if (course.tutorId !== userId) {
-      throw new ForbiddenException(ERROR_MESSAGES.NOT_COURSE_OWNER);
-    }
+    this.courseAccessPolicy.assertTutorOwnsCourse(course.tutorId, userId);
 
     return course;
   }
