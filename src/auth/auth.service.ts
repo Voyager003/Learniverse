@@ -39,9 +39,7 @@ export class AuthService {
       role: dto.role ?? Role.STUDENT,
     });
 
-    const tokens = await this.generateTokens(user.id, user.email, user.role);
-    await this.storeRefreshToken(user.id, tokens.refreshToken);
-    return tokens;
+    return this.generateAndPersistTokens(user.id, user.email, user.role);
   }
 
   async login(dto: LoginDto): Promise<AuthResponseDto> {
@@ -58,9 +56,7 @@ export class AuthService {
       throw new UnauthorizedException(ERROR_MESSAGES.INVALID_CREDENTIALS);
     }
 
-    const tokens = await this.generateTokens(user.id, user.email, user.role);
-    await this.storeRefreshToken(user.id, tokens.refreshToken);
-    return tokens;
+    return this.generateAndPersistTokens(user.id, user.email, user.role);
   }
 
   async refresh(
@@ -82,9 +78,7 @@ export class AuthService {
       throw new UnauthorizedException(ERROR_MESSAGES.INVALID_REFRESH_TOKEN);
     }
 
-    const tokens = await this.generateTokens(user.id, user.email, user.role);
-    await this.storeRefreshToken(user.id, tokens.refreshToken);
-    return tokens;
+    return this.generateAndPersistTokens(user.id, user.email, user.role);
   }
 
   async logout(userId: string): Promise<void> {
@@ -118,5 +112,15 @@ export class AuthService {
   ): Promise<void> {
     const hashedToken = await bcrypt.hash(refreshToken, this.SALT_ROUNDS);
     await this.usersService.updateRefreshToken(userId, hashedToken);
+  }
+
+  private async generateAndPersistTokens(
+    userId: string,
+    email: string,
+    role: Role,
+  ): Promise<AuthResponseDto> {
+    const tokens = await this.generateTokens(userId, email, role);
+    await this.storeRefreshToken(userId, tokens.refreshToken);
+    return tokens;
   }
 }
