@@ -23,10 +23,6 @@ export class SubmissionAccessPolicy {
     private readonly courseOwnershipPolicy: CourseOwnershipPolicy,
   ) {}
 
-  assertTutorOwnsCourse(tutorId: string, userId: string): void {
-    this.courseOwnershipPolicy.assertTutorOwnsCourse(tutorId, userId);
-  }
-
   async assertStudentEnrolled(
     studentId: string,
     courseId: string,
@@ -43,7 +39,7 @@ export class SubmissionAccessPolicy {
     const { assignmentId, courseId, courseTutorId, userId, role } = input;
 
     if (role === Role.TUTOR) {
-      this.assertTutorOwnsCourse(courseTutorId, userId);
+      this.courseOwnershipPolicy.assertTutorOwnsCourse(courseTutorId, userId);
       return { assignmentId };
     }
 

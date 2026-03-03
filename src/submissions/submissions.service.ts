@@ -13,6 +13,7 @@ import { AddFeedbackDto } from './dto/add-feedback.dto.js';
 import { SubmissionStatus, Role } from '../common/enums/index.js';
 import { ERROR_MESSAGES } from '../common/constants/error-messages.constant.js';
 import { SubmissionAccessPolicy } from './policies/submission-access.policy.js';
+import { CourseOwnershipPolicy } from '../common/policies/course-ownership.policy.js';
 
 interface MongoError extends Error {
   code?: number;
@@ -25,6 +26,7 @@ export class SubmissionsService {
     private readonly submissionModel: Model<SubmissionDocument>,
     private readonly assignmentsService: AssignmentsService,
     private readonly submissionAccessPolicy: SubmissionAccessPolicy,
+    private readonly courseOwnershipPolicy: CourseOwnershipPolicy,
   ) {}
 
   async submit(
@@ -116,7 +118,7 @@ export class SubmissionsService {
     const assignment = await this.assignmentsService.findOne(
       submission.assignmentId,
     );
-    this.submissionAccessPolicy.assertTutorOwnsCourse(
+    this.courseOwnershipPolicy.assertTutorOwnsCourse(
       assignment.course.tutorId,
       userId,
     );

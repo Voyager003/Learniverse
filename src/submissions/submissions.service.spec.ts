@@ -15,6 +15,7 @@ import { SubmissionStatus, Role } from '../common/enums/index.js';
 import { CreateSubmissionDto } from './dto/create-submission.dto.js';
 import { AddFeedbackDto } from './dto/add-feedback.dto.js';
 import { SubmissionAccessPolicy } from './policies/submission-access.policy.js';
+import { CourseOwnershipPolicy } from '../common/policies/course-ownership.policy.js';
 
 interface MockSubmission {
   _id: string;
@@ -40,6 +41,9 @@ describe('SubmissionsService', () => {
   let submissionAccessPolicy: Partial<
     Record<keyof SubmissionAccessPolicy, jest.Mock>
   >;
+  let courseOwnershipPolicy: Partial<
+    Record<keyof CourseOwnershipPolicy, jest.Mock>
+  >;
 
   beforeEach(async () => {
     submissionModel = {
@@ -55,8 +59,10 @@ describe('SubmissionsService', () => {
 
     submissionAccessPolicy = {
       assertStudentEnrolled: jest.fn(),
-      assertTutorOwnsCourse: jest.fn(),
       buildSubmissionFilter: jest.fn(),
+    };
+    courseOwnershipPolicy = {
+      assertTutorOwnsCourse: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -73,6 +79,10 @@ describe('SubmissionsService', () => {
         {
           provide: SubmissionAccessPolicy,
           useValue: submissionAccessPolicy,
+        },
+        {
+          provide: CourseOwnershipPolicy,
+          useValue: courseOwnershipPolicy,
         },
       ],
     }).compile();
@@ -408,7 +418,7 @@ describe('SubmissionsService', () => {
 
       assignmentsService.findOne!.mockResolvedValue(mockAssignment);
       submissionModel.findById.mockResolvedValue(submission);
-      submissionAccessPolicy.assertTutorOwnsCourse!.mockImplementation(() => {
+      courseOwnershipPolicy.assertTutorOwnsCourse!.mockImplementation(() => {
         throw new ForbiddenException();
       });
 
