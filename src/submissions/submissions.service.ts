@@ -1,7 +1,6 @@
 import {
   Injectable,
   NotFoundException,
-  ForbiddenException,
   ConflictException,
   BadRequestException,
 } from '@nestjs/common';
@@ -9,19 +8,14 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Submission, SubmissionDocument } from './schemas/submission.schema.js';
 import { AssignmentsService } from '../assignments/assignments.service.js';
-import { EnrollmentsService } from '../enrollments/enrollments.service.js';
 import { CreateSubmissionDto } from './dto/create-submission.dto.js';
 import { AddFeedbackDto } from './dto/add-feedback.dto.js';
 import { SubmissionStatus, Role } from '../common/enums/index.js';
 import { ERROR_MESSAGES } from '../common/constants/error-messages.constant.js';
+import { SubmissionAccessPolicy } from './policies/submission-access.policy.js';
 
 interface MongoError extends Error {
   code?: number;
-}
-
-interface SubmissionFilter {
-  assignmentId: string;
-  studentId?: string;
 }
 
 @Injectable()
@@ -30,7 +24,7 @@ export class SubmissionsService {
     @InjectModel(Submission.name)
     private readonly submissionModel: Model<SubmissionDocument>,
     private readonly assignmentsService: AssignmentsService,
-    private readonly enrollmentsService: EnrollmentsService,
+    private readonly submissionAccessPolicy: SubmissionAccessPolicy,
   ) {}
 
   async submit(
@@ -47,7 +41,10 @@ export class SubmissionsService {
     }
 
     // Verify student is enrolled
-    await this.assertStudentEnrolled(studentId, assignment.courseId);
+    await this.submissionAccessPolicy.assertStudentEnrolled(
+      studentId,
+      assignment.courseId,
+    );
 
     // C-2: Check for duplicate submission (app-level)
     const existing = await this.submissionModel.findOne({
@@ -81,12 +78,13 @@ export class SubmissionsService {
     role: Role,
   ): Promise<SubmissionDocument[]> {
     const assignment = await this.assignmentsService.findOne(assignmentId);
-    const filter = await this.buildSubmissionFilter(
+    const filter = await this.submissionAccessPolicy.buildSubmissionFilter({
       assignmentId,
-      assignment,
+      courseId: assignment.courseId,
+      courseTutorId: assignment.course.tutorId,
       userId,
       role,
-    );
+    });
 
     return this.submissionModel.find(filter).sort({ createdAt: -1 }).exec();
   }
@@ -118,7 +116,10 @@ export class SubmissionsService {
     const assignment = await this.assignmentsService.findOne(
       submission.assignmentId,
     );
-    this.assertTutorOwnsCourse(assignment.course.tutorId, userId);
+    this.submissionAccessPolicy.assertTutorOwnsCourse(
+      assignment.course.tutorId,
+      userId,
+    );
 
     submission.feedback = dto.feedback;
     submission.reviewedAt = new Date();
@@ -131,39 +132,5 @@ export class SubmissionsService {
     }
 
     return submission.save();
-  }
-
-  private async buildSubmissionFilter(
-    assignmentId: string,
-    assignment: { courseId: string; course: { tutorId: string } },
-    userId: string,
-    role: Role,
-  ): Promise<SubmissionFilter> {
-    if (role === Role.TUTOR) {
-      this.assertTutorOwnsCourse(assignment.course.tutorId, userId);
-      return { assignmentId };
-    }
-
-    await this.assertStudentEnrolled(userId, assignment.courseId);
-    return { assignmentId, studentId: userId };
-  }
-
-  private async assertStudentEnrolled(
-    studentId: string,
-    courseId: string,
-  ): Promise<void> {
-    const enrolled = await this.enrollmentsService.isEnrolled(
-      studentId,
-      courseId,
-    );
-    if (!enrolled) {
-      throw new ForbiddenException(ERROR_MESSAGES.NOT_ENROLLED_IN_COURSE);
-    }
-  }
-
-  private assertTutorOwnsCourse(tutorId: string, userId: string): void {
-    if (tutorId !== userId) {
-      throw new ForbiddenException(ERROR_MESSAGES.NOT_COURSE_OWNER);
-    }
   }
 }

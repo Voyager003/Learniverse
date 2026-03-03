@@ -9,12 +9,12 @@ import {
 import { SubmissionsService } from './submissions.service.js';
 import { Submission } from './schemas/submission.schema.js';
 import { AssignmentsService } from '../assignments/assignments.service.js';
-import { EnrollmentsService } from '../enrollments/enrollments.service.js';
 import { Assignment } from '../assignments/entities/assignment.entity.js';
 import { Course } from '../courses/entities/course.entity.js';
 import { SubmissionStatus, Role } from '../common/enums/index.js';
 import { CreateSubmissionDto } from './dto/create-submission.dto.js';
 import { AddFeedbackDto } from './dto/add-feedback.dto.js';
+import { SubmissionAccessPolicy } from './policies/submission-access.policy.js';
 
 interface MockSubmission {
   _id: string;
@@ -37,7 +37,9 @@ describe('SubmissionsService', () => {
   let service: SubmissionsService;
   let submissionModel: Record<string, jest.Mock>;
   let assignmentsService: Partial<Record<keyof AssignmentsService, jest.Mock>>;
-  let enrollmentsService: Partial<Record<keyof EnrollmentsService, jest.Mock>>;
+  let submissionAccessPolicy: Partial<
+    Record<keyof SubmissionAccessPolicy, jest.Mock>
+  >;
 
   beforeEach(async () => {
     submissionModel = {
@@ -51,8 +53,10 @@ describe('SubmissionsService', () => {
       findOne: jest.fn(),
     };
 
-    enrollmentsService = {
-      isEnrolled: jest.fn(),
+    submissionAccessPolicy = {
+      assertStudentEnrolled: jest.fn(),
+      assertTutorOwnsCourse: jest.fn(),
+      buildSubmissionFilter: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -67,8 +71,8 @@ describe('SubmissionsService', () => {
           useValue: assignmentsService,
         },
         {
-          provide: EnrollmentsService,
-          useValue: enrollmentsService,
+          provide: SubmissionAccessPolicy,
+          useValue: submissionAccessPolicy,
         },
       ],
     }).compile();
@@ -99,7 +103,9 @@ describe('SubmissionsService', () => {
       };
 
       assignmentsService.findOne!.mockResolvedValue(mockAssignment);
-      enrollmentsService.isEnrolled!.mockResolvedValue(true);
+      submissionAccessPolicy.assertStudentEnrolled!.mockResolvedValue(
+        undefined,
+      );
       submissionModel.findOne.mockResolvedValue(null);
       submissionModel.create.mockResolvedValue(savedDoc);
 
@@ -113,7 +119,7 @@ describe('SubmissionsService', () => {
       expect(assignmentsService.findOne).toHaveBeenCalledWith(
         'assignment-uuid',
       );
-      expect(enrollmentsService.isEnrolled).toHaveBeenCalledWith(
+      expect(submissionAccessPolicy.assertStudentEnrolled).toHaveBeenCalledWith(
         'student-uuid',
         'course-uuid',
       );
@@ -121,7 +127,9 @@ describe('SubmissionsService', () => {
 
     it('수강하지 않은 학생이면 ForbiddenException을 던져야 한다', async () => {
       assignmentsService.findOne!.mockResolvedValue(mockAssignment);
-      enrollmentsService.isEnrolled!.mockResolvedValue(false);
+      submissionAccessPolicy.assertStudentEnrolled!.mockRejectedValue(
+        new ForbiddenException(),
+      );
 
       await expect(
         service.submit('assignment-uuid', 'student-uuid', dto),
@@ -130,7 +138,9 @@ describe('SubmissionsService', () => {
 
     it('이미 제출한 과제이면 ConflictException을 던져야 한다', async () => {
       assignmentsService.findOne!.mockResolvedValue(mockAssignment);
-      enrollmentsService.isEnrolled!.mockResolvedValue(true);
+      submissionAccessPolicy.assertStudentEnrolled!.mockResolvedValue(
+        undefined,
+      );
       submissionModel.findOne.mockResolvedValue({ _id: 'existing' });
 
       await expect(
@@ -140,7 +150,9 @@ describe('SubmissionsService', () => {
 
     it('MongoDB unique index 위반 시 ConflictException을 던져야 한다', async () => {
       assignmentsService.findOne!.mockResolvedValue(mockAssignment);
-      enrollmentsService.isEnrolled!.mockResolvedValue(true);
+      submissionAccessPolicy.assertStudentEnrolled!.mockResolvedValue(
+        undefined,
+      );
       submissionModel.findOne.mockResolvedValue(null);
 
       const mongoError = new Error('E11000 duplicate key error');
@@ -166,7 +178,6 @@ describe('SubmissionsService', () => {
         dueDate: new Date('2020-01-01'),
       };
       assignmentsService.findOne!.mockResolvedValue(pastDueAssignment);
-      enrollmentsService.isEnrolled!.mockResolvedValue(true);
 
       await expect(
         service.submit('assignment-uuid', 'student-uuid', dto),
@@ -188,7 +199,9 @@ describe('SubmissionsService', () => {
       };
 
       assignmentsService.findOne!.mockResolvedValue(noDueAssignment);
-      enrollmentsService.isEnrolled!.mockResolvedValue(true);
+      submissionAccessPolicy.assertStudentEnrolled!.mockResolvedValue(
+        undefined,
+      );
       submissionModel.findOne.mockResolvedValue(null);
       submissionModel.create.mockResolvedValue(savedDoc);
 
@@ -220,7 +233,9 @@ describe('SubmissionsService', () => {
       };
 
       assignmentsService.findOne!.mockResolvedValue(mockAssignment);
-      enrollmentsService.isEnrolled!.mockResolvedValue(true);
+      submissionAccessPolicy.assertStudentEnrolled!.mockResolvedValue(
+        undefined,
+      );
       submissionModel.findOne.mockResolvedValue(null);
       submissionModel.create.mockResolvedValue(savedDoc);
 
@@ -244,6 +259,9 @@ describe('SubmissionsService', () => {
       ];
 
       assignmentsService.findOne!.mockResolvedValue(mockAssignment);
+      submissionAccessPolicy.buildSubmissionFilter!.mockResolvedValue({
+        assignmentId: 'assignment-uuid',
+      });
       submissionModel.find.mockReturnValue({
         sort: jest.fn().mockReturnValue({
           exec: jest.fn().mockResolvedValue(submissions),
@@ -266,7 +284,10 @@ describe('SubmissionsService', () => {
       const submissions = [{ _id: 's1', studentId: 'student-uuid' }];
 
       assignmentsService.findOne!.mockResolvedValue(mockAssignment);
-      enrollmentsService.isEnrolled!.mockResolvedValue(true);
+      submissionAccessPolicy.buildSubmissionFilter!.mockResolvedValue({
+        assignmentId: 'assignment-uuid',
+        studentId: 'student-uuid',
+      });
       submissionModel.find.mockReturnValue({
         sort: jest.fn().mockReturnValue({
           exec: jest.fn().mockResolvedValue(submissions),
@@ -288,7 +309,9 @@ describe('SubmissionsService', () => {
 
     it('수강하지 않은 학생이면 ForbiddenException을 던져야 한다', async () => {
       assignmentsService.findOne!.mockResolvedValue(mockAssignment);
-      enrollmentsService.isEnrolled!.mockResolvedValue(false);
+      submissionAccessPolicy.buildSubmissionFilter!.mockRejectedValue(
+        new ForbiddenException(),
+      );
 
       await expect(
         service.findByAssignment(
@@ -301,12 +324,14 @@ describe('SubmissionsService', () => {
 
     it('소유자가 아닌 Tutor이면 ForbiddenException을 던져야 한다', async () => {
       assignmentsService.findOne!.mockResolvedValue(mockAssignment);
+      submissionAccessPolicy.buildSubmissionFilter!.mockRejectedValue(
+        new ForbiddenException(),
+      );
 
       await expect(
         service.findByAssignment('assignment-uuid', 'other-tutor', Role.TUTOR),
       ).rejects.toThrow(ForbiddenException);
     });
-
   });
 
   // --- addFeedback ---
@@ -383,6 +408,9 @@ describe('SubmissionsService', () => {
 
       assignmentsService.findOne!.mockResolvedValue(mockAssignment);
       submissionModel.findById.mockResolvedValue(submission);
+      submissionAccessPolicy.assertTutorOwnsCourse!.mockImplementation(() => {
+        throw new ForbiddenException();
+      });
 
       await expect(
         service.addFeedback(
@@ -471,6 +499,5 @@ describe('SubmissionsService', () => {
         ),
       ).rejects.toThrow(BadRequestException);
     });
-
   });
 });
