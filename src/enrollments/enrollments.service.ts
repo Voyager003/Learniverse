@@ -68,26 +68,9 @@ export class EnrollmentsService {
     studentId: string,
     dto: UpdateProgressDto,
   ): Promise<Enrollment> {
-    const enrollment = await this.enrollmentRepository.findOne({
-      where: { id, studentId },
-    });
-
-    if (!enrollment) {
-      throw new NotFoundException(ERROR_MESSAGES.ENROLLMENT_NOT_FOUND);
-    }
-
-    // C-2: Only ACTIVE enrollments can have progress updated
-    if (enrollment.status !== EnrollmentStatus.ACTIVE) {
-      throw new BadRequestException(ERROR_MESSAGES.ENROLLMENT_NOT_ACTIVE);
-    }
-
-    enrollment.progress = dto.progress;
-
-    // Auto-complete when progress reaches 100
-    if (dto.progress === 100) {
-      enrollment.status = EnrollmentStatus.COMPLETED;
-    }
-
+    const enrollment = await this.findEnrollmentForStudentOrFail(id, studentId);
+    this.assertEnrollmentActive(enrollment);
+    this.applyProgress(enrollment, dto.progress);
     return this.enrollmentRepository.save(enrollment);
   }
 
@@ -183,6 +166,37 @@ export class EnrollmentsService {
         throw new ConflictException(ERROR_MESSAGES.ALREADY_ENROLLED);
       }
       throw error;
+    }
+  }
+
+  private async findEnrollmentForStudentOrFail(
+    id: string,
+    studentId: string,
+  ): Promise<Enrollment> {
+    const enrollment = await this.enrollmentRepository.findOne({
+      where: { id, studentId },
+    });
+
+    if (!enrollment) {
+      throw new NotFoundException(ERROR_MESSAGES.ENROLLMENT_NOT_FOUND);
+    }
+
+    return enrollment;
+  }
+
+  private assertEnrollmentActive(enrollment: Enrollment): void {
+    // C-2: Only ACTIVE enrollments can have progress updated
+    if (enrollment.status !== EnrollmentStatus.ACTIVE) {
+      throw new BadRequestException(ERROR_MESSAGES.ENROLLMENT_NOT_ACTIVE);
+    }
+  }
+
+  private applyProgress(enrollment: Enrollment, progress: number): void {
+    enrollment.progress = progress;
+
+    // Auto-complete when progress reaches 100
+    if (progress === 100) {
+      enrollment.status = EnrollmentStatus.COMPLETED;
     }
   }
 }
