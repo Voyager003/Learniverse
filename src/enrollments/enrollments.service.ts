@@ -30,63 +30,19 @@ export class EnrollmentsService {
     studentId: string,
     dto: CreateEnrollmentDto,
   ): Promise<Enrollment> {
-    // Verify course exists and is published
-    const course = await this.courseRepository.findOne({
-      where: { id: dto.courseId, isPublished: true },
-    });
-    if (!course) {
-      throw new NotFoundException(ERROR_MESSAGES.COURSE_NOT_FOUND);
-    }
+    const course = await this.findPublishedCourseOrFail(dto.courseId);
+    this.assertNotSelfEnrollment(course.tutorId, studentId);
+    await this.assertNoActiveOrCompletedEnrollment(studentId, dto.courseId);
 
-    // H-2: Prevent self-enrollment
-    if (course.tutorId === studentId) {
-      throw new BadRequestException(ERROR_MESSAGES.CANNOT_ENROLL_OWN_COURSE);
-    }
-
-    // C-1: Only block if ACTIVE or COMPLETED enrollment exists
-    const existing = await this.enrollmentRepository.findOne({
-      where: {
-        studentId,
-        courseId: dto.courseId,
-        status: In([EnrollmentStatus.ACTIVE, EnrollmentStatus.COMPLETED]),
-      },
-    });
-    if (existing) {
-      throw new ConflictException(ERROR_MESSAGES.ALREADY_ENROLLED);
-    }
-
-    // C-1: Reactivate DROPPED enrollment instead of creating new
-    const dropped = await this.enrollmentRepository.findOne({
-      where: {
-        studentId,
-        courseId: dto.courseId,
-        status: EnrollmentStatus.DROPPED,
-      },
-    });
-    if (dropped) {
-      dropped.status = EnrollmentStatus.ACTIVE;
-      dropped.progress = 0;
-      return this.enrollmentRepository.save(dropped);
-    }
-
-    // Create and save with DB-level unique constraint as safety net
-    const enrollment = this.enrollmentRepository.create({
+    const reactivated = await this.tryReactivateDroppedEnrollment(
       studentId,
-      courseId: dto.courseId,
-    });
-
-    try {
-      return await this.enrollmentRepository.save(enrollment);
-    } catch (error: unknown) {
-      if (
-        error instanceof QueryFailedError &&
-        (error.driverError as Record<string, unknown>)['code'] ===
-          UNIQUE_VIOLATION_CODE
-      ) {
-        throw new ConflictException(ERROR_MESSAGES.ALREADY_ENROLLED);
-      }
-      throw error;
+      dto.courseId,
+    );
+    if (reactivated) {
+      return reactivated;
     }
+
+    return this.createEnrollmentSafely(studentId, dto.courseId);
   }
 
   // H-4: Paginated enrollment list
@@ -144,5 +100,89 @@ export class EnrollmentsService {
       },
     });
     return !!enrollment;
+  }
+
+  private async findPublishedCourseOrFail(courseId: string): Promise<Course> {
+    // Verify course exists and is published
+    const course = await this.courseRepository.findOne({
+      where: { id: courseId, isPublished: true },
+    });
+
+    if (!course) {
+      throw new NotFoundException(ERROR_MESSAGES.COURSE_NOT_FOUND);
+    }
+
+    return course;
+  }
+
+  private assertNotSelfEnrollment(tutorId: string, studentId: string): void {
+    // H-2: Prevent self-enrollment
+    if (tutorId === studentId) {
+      throw new BadRequestException(ERROR_MESSAGES.CANNOT_ENROLL_OWN_COURSE);
+    }
+  }
+
+  private async assertNoActiveOrCompletedEnrollment(
+    studentId: string,
+    courseId: string,
+  ): Promise<void> {
+    // C-1: Only block if ACTIVE or COMPLETED enrollment exists
+    const existing = await this.enrollmentRepository.findOne({
+      where: {
+        studentId,
+        courseId,
+        status: In([EnrollmentStatus.ACTIVE, EnrollmentStatus.COMPLETED]),
+      },
+    });
+
+    if (existing) {
+      throw new ConflictException(ERROR_MESSAGES.ALREADY_ENROLLED);
+    }
+  }
+
+  private async tryReactivateDroppedEnrollment(
+    studentId: string,
+    courseId: string,
+  ): Promise<Enrollment | null> {
+    // C-1: Reactivate DROPPED enrollment instead of creating new
+    const dropped = await this.enrollmentRepository.findOne({
+      where: {
+        studentId,
+        courseId,
+        status: EnrollmentStatus.DROPPED,
+      },
+    });
+
+    if (!dropped) {
+      return null;
+    }
+
+    dropped.status = EnrollmentStatus.ACTIVE;
+    dropped.progress = 0;
+    return this.enrollmentRepository.save(dropped);
+  }
+
+  private async createEnrollmentSafely(
+    studentId: string,
+    courseId: string,
+  ): Promise<Enrollment> {
+    // Create and save with DB-level unique constraint as safety net
+    const enrollment = this.enrollmentRepository.create({
+      studentId,
+      courseId,
+    });
+
+    try {
+      return await this.enrollmentRepository.save(enrollment);
+    } catch (error: unknown) {
+      if (
+        error instanceof QueryFailedError &&
+        (error.driverError as Record<string, unknown>)['code'] ===
+          UNIQUE_VIOLATION_CODE
+      ) {
+        throw new ConflictException(ERROR_MESSAGES.ALREADY_ENROLLED);
+      }
+      throw error;
+    }
   }
 }
