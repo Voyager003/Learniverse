@@ -12,12 +12,16 @@ import { CreateSubmissionDto } from './dto/create-submission.dto.js';
 import { AddFeedbackDto } from './dto/add-feedback.dto.js';
 import { SubmissionStatus, Role } from '../common/enums/index.js';
 import { ERROR_MESSAGES } from '../common/constants/error-messages.constant.js';
-import { SubmissionAccessPolicy } from './policies/submission-access.policy.js';
 import { CourseEnrollmentPolicy } from '../common/policies/course-enrollment.policy.js';
 import { CourseOwnershipPolicy } from '../common/policies/course-ownership.policy.js';
 
 interface MongoError extends Error {
   code?: number;
+}
+
+interface SubmissionFilter {
+  assignmentId: string;
+  studentId?: string;
 }
 
 @Injectable()
@@ -26,7 +30,6 @@ export class SubmissionsService {
     @InjectModel(Submission.name)
     private readonly submissionModel: Model<SubmissionDocument>,
     private readonly assignmentsService: AssignmentsService,
-    private readonly submissionAccessPolicy: SubmissionAccessPolicy,
     private readonly courseEnrollmentPolicy: CourseEnrollmentPolicy,
     private readonly courseOwnershipPolicy: CourseOwnershipPolicy,
   ) {}
@@ -82,13 +85,20 @@ export class SubmissionsService {
     role: Role,
   ): Promise<SubmissionDocument[]> {
     const assignment = await this.assignmentsService.findOne(assignmentId);
-    const filter = await this.submissionAccessPolicy.buildSubmissionFilter({
-      assignmentId,
-      courseId: assignment.courseId,
-      courseTutorId: assignment.course.tutorId,
-      userId,
-      role,
-    });
+    const filter: SubmissionFilter = { assignmentId };
+
+    if (role === Role.TUTOR) {
+      this.courseOwnershipPolicy.assertTutorOwnsCourse(
+        assignment.course.tutorId,
+        userId,
+      );
+    } else {
+      await this.courseEnrollmentPolicy.assertStudentEnrolled(
+        userId,
+        assignment.courseId,
+      );
+      filter.studentId = userId;
+    }
 
     return this.submissionModel.find(filter).sort({ createdAt: -1 }).exec();
   }

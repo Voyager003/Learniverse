@@ -4,7 +4,6 @@ import { Submission, SubmissionSchema } from './schemas/submission.schema.js';
 import { SubmissionsService } from './submissions.service.js';
 import { SubmissionsController } from './submissions.controller.js';
 import { AssignmentsModule } from '../assignments/assignments.module.js';
-import { SubmissionAccessPolicy } from './policies/submission-access.policy.js';
 import { CommonPoliciesModule } from '../common/policies/common-policies.module.js';
 
 @Module({
@@ -16,6 +15,6 @@ import { CommonPoliciesModule } from '../common/policies/common-policies.module.
     CommonPoliciesModule,
   ],
   controllers: [SubmissionsController],
-  providers: [SubmissionsService, SubmissionAccessPolicy],
+  providers: [SubmissionsService],
 })
 export class SubmissionsModule {}

@@ -14,7 +14,6 @@ import { Course } from '../courses/entities/course.entity.js';
 import { SubmissionStatus, Role } from '../common/enums/index.js';
 import { CreateSubmissionDto } from './dto/create-submission.dto.js';
 import { AddFeedbackDto } from './dto/add-feedback.dto.js';
-import { SubmissionAccessPolicy } from './policies/submission-access.policy.js';
 import { CourseEnrollmentPolicy } from '../common/policies/course-enrollment.policy.js';
 import { CourseOwnershipPolicy } from '../common/policies/course-ownership.policy.js';
 
@@ -39,9 +38,6 @@ describe('SubmissionsService', () => {
   let service: SubmissionsService;
   let submissionModel: Record<string, jest.Mock>;
   let assignmentsService: Partial<Record<keyof AssignmentsService, jest.Mock>>;
-  let submissionAccessPolicy: Partial<
-    Record<keyof SubmissionAccessPolicy, jest.Mock>
-  >;
   let courseEnrollmentPolicy: Partial<
     Record<keyof CourseEnrollmentPolicy, jest.Mock>
   >;
@@ -61,9 +57,6 @@ describe('SubmissionsService', () => {
       findOne: jest.fn(),
     };
 
-    submissionAccessPolicy = {
-      buildSubmissionFilter: jest.fn(),
-    };
     courseEnrollmentPolicy = {
       assertStudentEnrolled: jest.fn(),
     };
@@ -81,10 +74,6 @@ describe('SubmissionsService', () => {
         {
           provide: AssignmentsService,
           useValue: assignmentsService,
-        },
-        {
-          provide: SubmissionAccessPolicy,
-          useValue: submissionAccessPolicy,
         },
         {
           provide: CourseEnrollmentPolicy,
@@ -279,8 +268,8 @@ describe('SubmissionsService', () => {
       ];
 
       assignmentsService.findOne!.mockResolvedValue(mockAssignment);
-      submissionAccessPolicy.buildSubmissionFilter!.mockResolvedValue({
-        assignmentId: 'assignment-uuid',
+      courseOwnershipPolicy.assertTutorOwnsCourse!.mockImplementation(() => {
+        // no-op
       });
       submissionModel.find.mockReturnValue({
         sort: jest.fn().mockReturnValue({
@@ -304,10 +293,9 @@ describe('SubmissionsService', () => {
       const submissions = [{ _id: 's1', studentId: 'student-uuid' }];
 
       assignmentsService.findOne!.mockResolvedValue(mockAssignment);
-      submissionAccessPolicy.buildSubmissionFilter!.mockResolvedValue({
-        assignmentId: 'assignment-uuid',
-        studentId: 'student-uuid',
-      });
+      courseEnrollmentPolicy.assertStudentEnrolled!.mockResolvedValue(
+        undefined,
+      );
       submissionModel.find.mockReturnValue({
         sort: jest.fn().mockReturnValue({
           exec: jest.fn().mockResolvedValue(submissions),
@@ -329,7 +317,7 @@ describe('SubmissionsService', () => {
 
     it('수강하지 않은 학생이면 ForbiddenException을 던져야 한다', async () => {
       assignmentsService.findOne!.mockResolvedValue(mockAssignment);
-      submissionAccessPolicy.buildSubmissionFilter!.mockRejectedValue(
+      courseEnrollmentPolicy.assertStudentEnrolled!.mockRejectedValue(
         new ForbiddenException(),
       );
 
@@ -344,9 +332,9 @@ describe('SubmissionsService', () => {
 
     it('소유자가 아닌 Tutor이면 ForbiddenException을 던져야 한다', async () => {
       assignmentsService.findOne!.mockResolvedValue(mockAssignment);
-      submissionAccessPolicy.buildSubmissionFilter!.mockRejectedValue(
-        new ForbiddenException(),
-      );
+      courseOwnershipPolicy.assertTutorOwnsCourse!.mockImplementation(() => {
+        throw new ForbiddenException();
+      });
 
       await expect(
         service.findByAssignment('assignment-uuid', 'other-tutor', Role.TUTOR),
