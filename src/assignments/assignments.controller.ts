@@ -30,8 +30,8 @@ export class AssignmentsController {
 
   @Post()
   @UseGuards(RolesGuard)
-  @Roles(Role.TUTOR, Role.ADMIN)
-  @ApiOperation({ summary: '과제 생성 (TUTOR, ADMIN)' })
+  @Roles(Role.TUTOR)
+  @ApiOperation({ summary: '과제 생성 (TUTOR)' })
   @ApiResponse({
     status: 201,
     description: '생성 성공',
