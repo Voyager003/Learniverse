@@ -50,11 +50,12 @@ describe('Enrollments (e2e)', () => {
   let studentToken: string;
   let tutorToken: string;
   let freshStudentToken: string;
+  let raceStudentToken: string;
   let publishedCourseId: string;
   let unpublishedCourseId: string;
   let enrollmentId: string;
   let studentId: string;
-  let freshStudentId: string;
+  let raceStudentId: string;
 
   beforeAll(async () => {
     ctx = await createTestApp();
@@ -134,10 +135,20 @@ describe('Enrollments (e2e)', () => {
       .send({ email: 'enroll-fresh@test.com', password: 'password123' });
     freshStudentToken = expectSuccessEnvelope<AuthTokens>(freshLogin, 200).data
       .accessToken;
-    freshStudentId = await getUserIdByEmail(
-      dataSource,
-      'enroll-fresh@test.com',
-    );
+
+    // 6. Register race STUDENT (for concurrency test only)
+    await request(app.getHttpServer()).post('/api/v1/auth/register').send({
+      email: 'enroll-race@test.com',
+      password: 'password123',
+      name: 'Race Student',
+    });
+
+    const raceLogin = await request(app.getHttpServer())
+      .post('/api/v1/auth/login')
+      .send({ email: 'enroll-race@test.com', password: 'password123' });
+    raceStudentToken = expectSuccessEnvelope<AuthTokens>(raceLogin, 200).data
+      .accessToken;
+    raceStudentId = await getUserIdByEmail(dataSource, 'enroll-race@test.com');
   });
 
   afterAll(async () => {
@@ -206,17 +217,17 @@ describe('Enrollments (e2e)', () => {
       const [r1, r2] = await Promise.all([
         request(app.getHttpServer())
           .post('/api/v1/enrollments')
-          .set('Authorization', `Bearer ${freshStudentToken}`)
+          .set('Authorization', `Bearer ${raceStudentToken}`)
           .send({ courseId: raceCourseId }),
         request(app.getHttpServer())
           .post('/api/v1/enrollments')
-          .set('Authorization', `Bearer ${freshStudentToken}`)
+          .set('Authorization', `Bearer ${raceStudentToken}`)
           .send({ courseId: raceCourseId }),
       ]);
 
       const statuses = [r1.status, r2.status].sort((a, b) => a - b);
       expect(statuses).toEqual([201, 409]);
-      await assertEnrollmentCount(dataSource, freshStudentId, raceCourseId, 1);
+      await assertEnrollmentCount(dataSource, raceStudentId, raceCourseId, 1);
     });
 
     it('존재하지 않는 강좌에 등록하면 404를 반환한다', async () => {
