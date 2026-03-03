@@ -80,22 +80,9 @@ export class SubmissionsService {
     userId: string,
     dto: AddFeedbackDto,
   ): Promise<SubmissionDocument> {
-    const submission = await this.submissionModel.findById(submissionId);
-    if (!submission) {
-      throw new NotFoundException(ERROR_MESSAGES.SUBMISSION_NOT_FOUND);
-    }
-
-    // H-4: Verify submission belongs to the assignment in the URL
-    if (submission.assignmentId !== assignmentId) {
-      throw new BadRequestException(
-        ERROR_MESSAGES.SUBMISSION_ASSIGNMENT_MISMATCH,
-      );
-    }
-
-    // H-3: Guard against re-feedback on already REVIEWED submissions
-    if (submission.status === SubmissionStatus.REVIEWED) {
-      throw new ConflictException(ERROR_MESSAGES.SUBMISSION_ALREADY_REVIEWED);
-    }
+    const submission = await this.findSubmissionOrFail(submissionId);
+    this.assertSubmissionBelongsToAssignment(submission, assignmentId);
+    this.assertFeedbackAllowed(submission);
 
     // Verify ownership via assignment → course
     const assignment = await this.assignmentsService.findOne(
@@ -106,15 +93,7 @@ export class SubmissionsService {
       userId,
     );
 
-    submission.feedback = dto.feedback;
-    submission.reviewedAt = new Date();
-
-    if (dto.score !== undefined) {
-      submission.score = dto.score;
-      submission.status = SubmissionStatus.REVIEWED;
-    } else {
-      submission.status = SubmissionStatus.RETURNED;
-    }
+    this.applyFeedback(submission, dto);
 
     return submission.save();
   }
@@ -173,5 +152,52 @@ export class SubmissionsService {
       }
       throw error;
     }
+  }
+
+  private async findSubmissionOrFail(
+    submissionId: string,
+  ): Promise<SubmissionDocument> {
+    const submission = await this.submissionModel.findById(submissionId);
+
+    if (!submission) {
+      throw new NotFoundException(ERROR_MESSAGES.SUBMISSION_NOT_FOUND);
+    }
+
+    return submission;
+  }
+
+  private assertSubmissionBelongsToAssignment(
+    submission: SubmissionDocument,
+    assignmentId: string,
+  ): void {
+    // H-4: Verify submission belongs to the assignment in the URL
+    if (submission.assignmentId !== assignmentId) {
+      throw new BadRequestException(
+        ERROR_MESSAGES.SUBMISSION_ASSIGNMENT_MISMATCH,
+      );
+    }
+  }
+
+  private assertFeedbackAllowed(submission: SubmissionDocument): void {
+    // H-3: Guard against re-feedback on already REVIEWED submissions
+    if (submission.status === SubmissionStatus.REVIEWED) {
+      throw new ConflictException(ERROR_MESSAGES.SUBMISSION_ALREADY_REVIEWED);
+    }
+  }
+
+  private applyFeedback(
+    submission: SubmissionDocument,
+    dto: AddFeedbackDto,
+  ): void {
+    submission.feedback = dto.feedback;
+    submission.reviewedAt = new Date();
+
+    if (dto.score !== undefined) {
+      submission.score = dto.score;
+      submission.status = SubmissionStatus.REVIEWED;
+      return;
+    }
+
+    submission.status = SubmissionStatus.RETURNED;
   }
 }
