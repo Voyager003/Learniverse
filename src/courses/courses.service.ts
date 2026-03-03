@@ -15,7 +15,6 @@ import { CreateLectureDto } from './dto/create-lecture.dto.js';
 import { UpdateLectureDto } from './dto/update-lecture.dto.js';
 import { PaginatedResponseDto } from '../common/dto/paginated-response.dto.js';
 import { ERROR_MESSAGES } from '../common/constants/error-messages.constant.js';
-import { Role } from '../common/enums/index.js';
 
 const UNIQUE_VIOLATION_CODE = '23505';
 
@@ -76,16 +75,15 @@ export class CoursesService {
   async update(
     id: string,
     userId: string,
-    role: Role,
     dto: UpdateCourseDto,
   ): Promise<Course> {
-    const course = await this.findByIdAndVerifyOwner(id, userId, role);
+    const course = await this.findByIdAndVerifyOwner(id, userId);
     Object.assign(course, dto);
     return this.courseRepository.save(course);
   }
 
-  async remove(id: string, userId: string, role: Role): Promise<void> {
-    const course = await this.findByIdAndVerifyOwner(id, userId, role);
+  async remove(id: string, userId: string): Promise<void> {
+    const course = await this.findByIdAndVerifyOwner(id, userId);
     await this.courseRepository.remove(course);
   }
 
@@ -94,10 +92,9 @@ export class CoursesService {
   async createLecture(
     courseId: string,
     userId: string,
-    role: Role,
     dto: CreateLectureDto,
   ): Promise<Lecture> {
-    await this.findByIdAndVerifyOwner(courseId, userId, role);
+    await this.findByIdAndVerifyOwner(courseId, userId);
     const lecture = this.lectureRepository.create({ ...dto, courseId });
     try {
       return await this.lectureRepository.save(lecture);
@@ -119,10 +116,9 @@ export class CoursesService {
     courseId: string,
     lectureId: string,
     userId: string,
-    role: Role,
     dto: UpdateLectureDto,
   ): Promise<Lecture> {
-    await this.findByIdAndVerifyOwner(courseId, userId, role);
+    await this.findByIdAndVerifyOwner(courseId, userId);
     const lecture = await this.findLectureOrFail(courseId, lectureId);
     Object.assign(lecture, dto);
     return this.lectureRepository.save(lecture);
@@ -132,9 +128,8 @@ export class CoursesService {
     courseId: string,
     lectureId: string,
     userId: string,
-    role: Role,
   ): Promise<void> {
-    await this.findByIdAndVerifyOwner(courseId, userId, role);
+    await this.findByIdAndVerifyOwner(courseId, userId);
     const lecture = await this.findLectureOrFail(courseId, lectureId);
     await this.lectureRepository.remove(lecture);
   }
@@ -144,7 +139,6 @@ export class CoursesService {
   private async findByIdAndVerifyOwner(
     id: string,
     userId: string,
-    role: Role,
   ): Promise<Course> {
     const course = await this.courseRepository.findOne({ where: { id } });
 

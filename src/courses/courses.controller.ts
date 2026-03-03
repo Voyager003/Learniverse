@@ -112,7 +112,6 @@ export class CoursesController {
     const course = await this.coursesService.update(
       id,
       req.user.userId,
-      req.user.role,
       dto,
     );
     return CourseResponseDto.from(course);
@@ -131,7 +130,7 @@ export class CoursesController {
     @Req() req: { user: RequestUser },
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<void> {
-    await this.coursesService.remove(id, req.user.userId, req.user.role);
+    await this.coursesService.remove(id, req.user.userId);
   }
 
   // --- Lecture endpoints ---
@@ -156,7 +155,6 @@ export class CoursesController {
     const lecture = await this.coursesService.createLecture(
       id,
       req.user.userId,
-      req.user.role,
       dto,
     );
     return LectureResponseDto.from(lecture);
@@ -184,7 +182,6 @@ export class CoursesController {
       id,
       lid,
       req.user.userId,
-      req.user.role,
       dto,
     );
     return LectureResponseDto.from(lecture);
@@ -208,7 +205,6 @@ export class CoursesController {
       id,
       lid,
       req.user.userId,
-      req.user.role,
     );
   }
 }

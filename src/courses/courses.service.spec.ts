@@ -17,7 +17,6 @@ import { Lecture } from './entities/lecture.entity.js';
 import {
   CourseCategory,
   CourseDifficulty,
-  Role,
 } from '../common/enums/index.js';
 import { CreateCourseDto } from './dto/create-course.dto.js';
 import { UpdateCourseDto } from './dto/update-course.dto.js';
@@ -251,7 +250,6 @@ describe('CoursesService', () => {
       const result = await service.update(
         'course-uuid',
         'tutor-uuid',
-        Role.TUTOR,
         dto,
       );
 
@@ -263,7 +261,7 @@ describe('CoursesService', () => {
       courseRepository.findOne!.mockResolvedValue(course);
 
       await expect(
-        service.update('course-uuid', 'tutor-uuid', Role.TUTOR, {
+        service.update('course-uuid', 'tutor-uuid', {
           title: 'New',
         }),
       ).rejects.toThrow(ForbiddenException);
@@ -273,7 +271,7 @@ describe('CoursesService', () => {
       courseRepository.findOne!.mockResolvedValue(null);
 
       await expect(
-        service.update('nonexistent', 'tutor-uuid', Role.TUTOR, {
+        service.update('nonexistent', 'tutor-uuid', {
           title: 'New',
         }),
       ).rejects.toThrow(NotFoundException);
@@ -286,7 +284,7 @@ describe('CoursesService', () => {
       courseRepository.findOne!.mockResolvedValue(course);
       courseRepository.remove!.mockResolvedValue(course);
 
-      await service.remove('course-uuid', 'tutor-uuid', Role.TUTOR);
+      await service.remove('course-uuid', 'tutor-uuid');
 
       expect(courseRepository.remove).toHaveBeenCalledWith(course);
     });
@@ -296,7 +294,7 @@ describe('CoursesService', () => {
       courseRepository.findOne!.mockResolvedValue(course);
 
       await expect(
-        service.remove('course-uuid', 'tutor-uuid', Role.TUTOR),
+        service.remove('course-uuid', 'tutor-uuid'),
       ).rejects.toThrow(ForbiddenException);
     });
 
@@ -304,7 +302,7 @@ describe('CoursesService', () => {
       courseRepository.findOne!.mockResolvedValue(null);
 
       await expect(
-        service.remove('nonexistent', 'tutor-uuid', Role.TUTOR),
+        service.remove('nonexistent', 'tutor-uuid'),
       ).rejects.toThrow(NotFoundException);
     });
   });
@@ -332,7 +330,6 @@ describe('CoursesService', () => {
       const result = await service.createLecture(
         'course-uuid',
         'tutor-uuid',
-        Role.TUTOR,
         dto,
       );
 
@@ -348,7 +345,7 @@ describe('CoursesService', () => {
       courseRepository.findOne!.mockResolvedValue(course);
 
       await expect(
-        service.createLecture('course-uuid', 'tutor-uuid', Role.TUTOR, {
+        service.createLecture('course-uuid', 'tutor-uuid', {
           title: 'Lecture 1',
           content: 'Content',
           order: 1,
@@ -374,7 +371,7 @@ describe('CoursesService', () => {
       lectureRepository.save!.mockRejectedValue(queryError);
 
       await expect(
-        service.createLecture('course-uuid', 'tutor-uuid', Role.TUTOR, {
+        service.createLecture('course-uuid', 'tutor-uuid', {
           title: 'Lecture',
           content: 'Content',
           order: 1,
@@ -402,7 +399,6 @@ describe('CoursesService', () => {
         'course-uuid',
         'lecture-uuid',
         'tutor-uuid',
-        Role.TUTOR,
         dto,
       );
 
@@ -418,7 +414,6 @@ describe('CoursesService', () => {
           'course-uuid',
           'lecture-uuid',
           'tutor-uuid',
-          Role.TUTOR,
           { title: 'New' },
         ),
       ).rejects.toThrow(ForbiddenException);
@@ -434,7 +429,6 @@ describe('CoursesService', () => {
           'course-uuid',
           'nonexistent',
           'tutor-uuid',
-          Role.TUTOR,
           { title: 'New' },
         ),
       ).rejects.toThrow(NotFoundException);
@@ -457,7 +451,6 @@ describe('CoursesService', () => {
         'course-uuid',
         'lecture-uuid',
         'tutor-uuid',
-        Role.TUTOR,
       );
 
       expect(lectureRepository.remove).toHaveBeenCalledWith(lecture);
@@ -472,7 +465,6 @@ describe('CoursesService', () => {
           'course-uuid',
           'lecture-uuid',
           'tutor-uuid',
-          Role.TUTOR,
         ),
       ).rejects.toThrow(ForbiddenException);
     });
@@ -487,7 +479,6 @@ describe('CoursesService', () => {
           'course-uuid',
           'nonexistent',
           'tutor-uuid',
-          Role.TUTOR,
         ),
       ).rejects.toThrow(NotFoundException);
     });
