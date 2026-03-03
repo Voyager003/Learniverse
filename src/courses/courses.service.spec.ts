@@ -269,27 +269,6 @@ describe('CoursesService', () => {
       ).rejects.toThrow(ForbiddenException);
     });
 
-    it('ADMIN은 모든 강좌를 수정할 수 있어야 한다', async () => {
-      const course = {
-        id: 'course-uuid',
-        tutorId: 'other-tutor',
-        title: 'Old',
-      } as Course;
-      const updated = { ...course, title: 'Admin Updated' } as Course;
-
-      courseRepository.findOne!.mockResolvedValue(course);
-      courseRepository.save!.mockResolvedValue(updated);
-
-      const result = await service.update(
-        'course-uuid',
-        'admin-uuid',
-        Role.ADMIN,
-        { title: 'Admin Updated' },
-      );
-
-      expect(result.title).toBe('Admin Updated');
-    });
-
     it('강좌를 찾을 수 없으면 NotFoundException을 던져야 한다', async () => {
       courseRepository.findOne!.mockResolvedValue(null);
 
@@ -319,16 +298,6 @@ describe('CoursesService', () => {
       await expect(
         service.remove('course-uuid', 'tutor-uuid', Role.TUTOR),
       ).rejects.toThrow(ForbiddenException);
-    });
-
-    it('ADMIN은 모든 강좌를 삭제할 수 있어야 한다', async () => {
-      const course = { id: 'course-uuid', tutorId: 'other-tutor' } as Course;
-      courseRepository.findOne!.mockResolvedValue(course);
-      courseRepository.remove!.mockResolvedValue(course);
-
-      await service.remove('course-uuid', 'admin-uuid', Role.ADMIN);
-
-      expect(courseRepository.remove).toHaveBeenCalledWith(course);
     });
 
     it('강좌를 찾을 수 없으면 NotFoundException을 던져야 한다', async () => {

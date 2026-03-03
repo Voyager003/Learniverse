@@ -152,8 +152,7 @@ export class CoursesService {
       throw new NotFoundException(ERROR_MESSAGES.COURSE_NOT_FOUND);
     }
 
-    // ADMIN can operate on any course
-    if (role !== Role.ADMIN && course.tutorId !== userId) {
+    if (course.tutorId !== userId) {
       throw new ForbiddenException(ERROR_MESSAGES.NOT_COURSE_OWNER);
     }
 
