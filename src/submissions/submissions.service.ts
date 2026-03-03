@@ -90,9 +90,7 @@ export class SubmissionsService {
 
     const filter: SubmissionFilter = { assignmentId };
 
-    if (role === Role.ADMIN) {
-      // ADMIN can see all submissions
-    } else if (role === Role.TUTOR) {
+    if (role === Role.TUTOR) {
       // Tutor must own the course
       if (assignment.course.tutorId !== userId) {
         throw new ForbiddenException(ERROR_MESSAGES.NOT_COURSE_OWNER);
@@ -140,7 +138,7 @@ export class SubmissionsService {
     const assignment = await this.assignmentsService.findOne(
       submission.assignmentId,
     );
-    if (role !== Role.ADMIN && assignment.course.tutorId !== userId) {
+    if (role !== Role.TUTOR || assignment.course.tutorId !== userId) {
       throw new ForbiddenException(ERROR_MESSAGES.NOT_COURSE_OWNER);
     }
 

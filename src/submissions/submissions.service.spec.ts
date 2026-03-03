@@ -307,24 +307,6 @@ describe('SubmissionsService', () => {
       ).rejects.toThrow(ForbiddenException);
     });
 
-    it('ADMIN은 모든 제출을 조회할 수 있어야 한다', async () => {
-      const submissions = [{ _id: 's1' }];
-
-      assignmentsService.findOne!.mockResolvedValue(mockAssignment);
-      submissionModel.find.mockReturnValue({
-        sort: jest.fn().mockReturnValue({
-          exec: jest.fn().mockResolvedValue(submissions),
-        }),
-      });
-
-      const result = await service.findByAssignment(
-        'assignment-uuid',
-        'admin-uuid',
-        Role.ADMIN,
-      );
-
-      expect(result).toEqual(submissions);
-    });
   });
 
   // --- addFeedback ---
@@ -497,28 +479,5 @@ describe('SubmissionsService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('ADMIN은 피드백을 추가할 수 있어야 한다', async () => {
-      const submission: MockSubmission = {
-        _id: 'submission-id',
-        assignmentId: 'assignment-uuid',
-        studentId: 'student-uuid',
-        status: SubmissionStatus.SUBMITTED,
-        save: jest.fn(),
-      };
-
-      assignmentsService.findOne!.mockResolvedValue(mockAssignment);
-      submissionModel.findById.mockResolvedValue(submission);
-      submission.save.mockResolvedValue(submission);
-
-      await service.addFeedback(
-        'submission-id',
-        'assignment-uuid',
-        'admin-uuid',
-        Role.ADMIN,
-        feedbackDto,
-      );
-
-      expect(submission.save).toHaveBeenCalled();
-    });
   });
 });
