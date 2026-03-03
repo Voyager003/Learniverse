@@ -11,7 +11,7 @@ import { Assignment } from './entities/assignment.entity.js';
 import { Course } from '../courses/entities/course.entity.js';
 import { Role } from '../common/enums/index.js';
 import { CreateAssignmentDto } from './dto/create-assignment.dto.js';
-import { AssignmentAccessPolicy } from './policies/assignment-access.policy.js';
+import { CourseEnrollmentPolicy } from '../common/policies/course-enrollment.policy.js';
 import { CourseOwnershipPolicy } from '../common/policies/course-ownership.policy.js';
 
 type MockRepository<T extends ObjectLiteral> = Partial<
@@ -32,8 +32,8 @@ describe('AssignmentsService', () => {
   let service: AssignmentsService;
   let assignmentRepository: MockRepository<Assignment>;
   let courseRepository: MockRepository<Course>;
-  let assignmentAccessPolicy: Partial<
-    Record<keyof AssignmentAccessPolicy, jest.Mock>
+  let courseEnrollmentPolicy: Partial<
+    Record<keyof CourseEnrollmentPolicy, jest.Mock>
   >;
   let courseOwnershipPolicy: Partial<
     Record<keyof CourseOwnershipPolicy, jest.Mock>
@@ -42,8 +42,8 @@ describe('AssignmentsService', () => {
   beforeEach(async () => {
     assignmentRepository = createMockRepository<Assignment>();
     courseRepository = createMockRepository<Course>();
-    assignmentAccessPolicy = {
-      assertCanReadCourseAssignments: jest.fn(),
+    courseEnrollmentPolicy = {
+      assertStudentEnrolled: jest.fn(),
     };
     courseOwnershipPolicy = {
       assertTutorOwnsCourse: jest.fn(),
@@ -61,8 +61,8 @@ describe('AssignmentsService', () => {
           useValue: courseRepository,
         },
         {
-          provide: AssignmentAccessPolicy,
-          useValue: assignmentAccessPolicy,
+          provide: CourseEnrollmentPolicy,
+          useValue: courseEnrollmentPolicy,
         },
         {
           provide: CourseOwnershipPolicy,
@@ -173,6 +173,9 @@ describe('AssignmentsService', () => {
       const assignments = [{ id: 'a1' }, { id: 'a2' }] as Assignment[];
 
       courseRepository.findOne!.mockResolvedValue(course);
+      courseOwnershipPolicy.assertTutorOwnsCourse!.mockImplementation(() => {
+        // no-op
+      });
       assignmentRepository.find!.mockResolvedValue(assignments);
 
       const result = await service.findByCourse(
@@ -194,7 +197,7 @@ describe('AssignmentsService', () => {
       const assignments = [{ id: 'a1' }] as Assignment[];
 
       courseRepository.findOne!.mockResolvedValue(course);
-      assignmentAccessPolicy.assertCanReadCourseAssignments!.mockResolvedValue(
+      courseEnrollmentPolicy.assertStudentEnrolled!.mockResolvedValue(
         undefined,
       );
       assignmentRepository.find!.mockResolvedValue(assignments);
@@ -206,16 +209,17 @@ describe('AssignmentsService', () => {
       );
 
       expect(result).toEqual(assignments);
-      expect(
-        assignmentAccessPolicy.assertCanReadCourseAssignments,
-      ).toHaveBeenCalledWith(course, 'student-uuid', Role.STUDENT);
+      expect(courseEnrollmentPolicy.assertStudentEnrolled).toHaveBeenCalledWith(
+        'student-uuid',
+        'course-uuid',
+      );
     });
 
     it('수강하지 않은 학생이면 ForbiddenException을 던져야 한다', async () => {
       const course = { id: 'course-uuid', tutorId: 'tutor-uuid' } as Course;
 
       courseRepository.findOne!.mockResolvedValue(course);
-      assignmentAccessPolicy.assertCanReadCourseAssignments!.mockRejectedValue(
+      courseEnrollmentPolicy.assertStudentEnrolled!.mockRejectedValue(
         new ForbiddenException(),
       );
 
@@ -227,9 +231,9 @@ describe('AssignmentsService', () => {
     it('소유자가 아닌 Tutor이면 ForbiddenException을 던져야 한다', async () => {
       const course = { id: 'course-uuid', tutorId: 'other-tutor' } as Course;
       courseRepository.findOne!.mockResolvedValue(course);
-      assignmentAccessPolicy.assertCanReadCourseAssignments!.mockRejectedValue(
-        new ForbiddenException(),
-      );
+      courseOwnershipPolicy.assertTutorOwnsCourse!.mockImplementation(() => {
+        throw new ForbiddenException();
+      });
 
       await expect(
         service.findByCourse('course-uuid', 'tutor-uuid', Role.TUTOR),
