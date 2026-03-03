@@ -49,16 +49,8 @@ export class SubmissionsService {
     // Verify assignment exists and get course info
     const assignment = await this.assignmentsService.findOne(assignmentId);
 
-    // H-2: Check submission deadline
-    if (assignment.dueDate && new Date() > assignment.dueDate) {
-      throw new BadRequestException(ERROR_MESSAGES.SUBMISSION_DEADLINE_PASSED);
-    }
-
-    // Verify student is enrolled
-    await this.courseEnrollmentPolicy.assertStudentEnrolled(
-      studentId,
-      assignment.courseId,
-    );
+    this.assertSubmissionWithinDeadline(assignment.dueDate);
+    await this.assertStudentCanSubmit(studentId, assignment.courseId);
 
     await this.assertNoDuplicateSubmission(assignmentId, studentId);
     return this.createSubmissionSafely(assignmentId, studentId, dto);
@@ -144,6 +136,21 @@ export class SubmissionsService {
     if (existing) {
       throw new ConflictException(ERROR_MESSAGES.ALREADY_SUBMITTED);
     }
+  }
+
+  private assertSubmissionWithinDeadline(dueDate?: Date): void {
+    // H-2: Check submission deadline
+    if (dueDate && new Date() > dueDate) {
+      throw new BadRequestException(ERROR_MESSAGES.SUBMISSION_DEADLINE_PASSED);
+    }
+  }
+
+  private async assertStudentCanSubmit(
+    studentId: string,
+    courseId: string,
+  ): Promise<void> {
+    // Verify student is enrolled
+    await this.courseEnrollmentPolicy.assertStudentEnrolled(studentId, courseId);
   }
 
   private async createSubmissionSafely(
