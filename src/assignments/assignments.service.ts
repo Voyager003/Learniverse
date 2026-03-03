@@ -11,6 +11,7 @@ import { CreateAssignmentDto } from './dto/create-assignment.dto.js';
 import { Role } from '../common/enums/index.js';
 import { ERROR_MESSAGES } from '../common/constants/error-messages.constant.js';
 import { AssignmentAccessPolicy } from './policies/assignment-access.policy.js';
+import { CourseOwnershipPolicy } from '../common/policies/course-ownership.policy.js';
 
 @Injectable()
 export class AssignmentsService {
@@ -20,6 +21,7 @@ export class AssignmentsService {
     @InjectRepository(Course)
     private readonly courseRepository: Repository<Course>,
     private readonly assignmentAccessPolicy: AssignmentAccessPolicy,
+    private readonly courseOwnershipPolicy: CourseOwnershipPolicy,
   ) {}
 
   async create(
@@ -28,7 +30,7 @@ export class AssignmentsService {
     dto: CreateAssignmentDto,
   ): Promise<Assignment> {
     const course = await this.findCourseOrFail(courseId);
-    this.assignmentAccessPolicy.assertTutorOwnsCourse(course, userId);
+    this.courseOwnershipPolicy.assertTutorOwnsCourse(course.tutorId, userId);
 
     // H-1: Validate dueDate is not in the past
     if (dto.dueDate && new Date(dto.dueDate) < new Date()) {

@@ -12,6 +12,7 @@ import { Course } from '../courses/entities/course.entity.js';
 import { Role } from '../common/enums/index.js';
 import { CreateAssignmentDto } from './dto/create-assignment.dto.js';
 import { AssignmentAccessPolicy } from './policies/assignment-access.policy.js';
+import { CourseOwnershipPolicy } from '../common/policies/course-ownership.policy.js';
 
 type MockRepository<T extends ObjectLiteral> = Partial<
   Record<keyof Repository<T>, jest.Mock>
@@ -34,13 +35,18 @@ describe('AssignmentsService', () => {
   let assignmentAccessPolicy: Partial<
     Record<keyof AssignmentAccessPolicy, jest.Mock>
   >;
+  let courseOwnershipPolicy: Partial<
+    Record<keyof CourseOwnershipPolicy, jest.Mock>
+  >;
 
   beforeEach(async () => {
     assignmentRepository = createMockRepository<Assignment>();
     courseRepository = createMockRepository<Course>();
     assignmentAccessPolicy = {
-      assertTutorOwnsCourse: jest.fn(),
       assertCanReadCourseAssignments: jest.fn(),
+    };
+    courseOwnershipPolicy = {
+      assertTutorOwnsCourse: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -57,6 +63,10 @@ describe('AssignmentsService', () => {
         {
           provide: AssignmentAccessPolicy,
           useValue: assignmentAccessPolicy,
+        },
+        {
+          provide: CourseOwnershipPolicy,
+          useValue: courseOwnershipPolicy,
         },
       ],
     }).compile();
@@ -92,8 +102,8 @@ describe('AssignmentsService', () => {
         courseId: 'course-uuid',
         dueDate: undefined,
       });
-      expect(assignmentAccessPolicy.assertTutorOwnsCourse).toHaveBeenCalledWith(
-        course,
+      expect(courseOwnershipPolicy.assertTutorOwnsCourse).toHaveBeenCalledWith(
+        course.tutorId,
         'tutor-uuid',
       );
     });
@@ -101,7 +111,7 @@ describe('AssignmentsService', () => {
     it('소유자가 아닌 Tutor이면 ForbiddenException을 던져야 한다', async () => {
       const course = { id: 'course-uuid', tutorId: 'other-tutor' } as Course;
       courseRepository.findOne!.mockResolvedValue(course);
-      assignmentAccessPolicy.assertTutorOwnsCourse!.mockImplementation(() => {
+      courseOwnershipPolicy.assertTutorOwnsCourse!.mockImplementation(() => {
         throw new ForbiddenException();
       });
 

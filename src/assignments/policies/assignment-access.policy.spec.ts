@@ -30,20 +30,6 @@ describe('AssignmentAccessPolicy', () => {
     policy = module.get<AssignmentAccessPolicy>(AssignmentAccessPolicy);
   });
 
-  describe('assertTutorOwnsCourse', () => {
-    it('튜터가 강좌 소유자면 예외 없이 통과해야 한다', () => {
-      expect(() =>
-        policy.assertTutorOwnsCourse({ tutorId: 'tutor-1' }, 'tutor-1'),
-      ).not.toThrow();
-    });
-
-    it('튜터가 강좌 소유자가 아니면 ForbiddenException을 던져야 한다', () => {
-      expect(() =>
-        policy.assertTutorOwnsCourse({ tutorId: 'tutor-2' }, 'tutor-1'),
-      ).toThrow(ForbiddenException);
-    });
-  });
-
   describe('assertCanReadCourseAssignments', () => {
     it('소유 튜터는 조회할 수 있어야 한다', async () => {
       await expect(

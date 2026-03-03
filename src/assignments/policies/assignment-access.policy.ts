@@ -11,17 +11,13 @@ export class AssignmentAccessPolicy {
     private readonly courseOwnershipPolicy: CourseOwnershipPolicy,
   ) {}
 
-  assertTutorOwnsCourse(course: Pick<Course, 'tutorId'>, userId: string): void {
-    this.courseOwnershipPolicy.assertTutorOwnsCourse(course.tutorId, userId);
-  }
-
   async assertCanReadCourseAssignments(
     course: Pick<Course, 'id' | 'tutorId'>,
     userId: string,
     role: Role,
   ): Promise<void> {
     if (role === Role.TUTOR) {
-      this.assertTutorOwnsCourse(course, userId);
+      this.courseOwnershipPolicy.assertTutorOwnsCourse(course.tutorId, userId);
       return;
     }
 
