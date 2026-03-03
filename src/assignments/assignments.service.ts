@@ -31,19 +31,8 @@ export class AssignmentsService {
   ): Promise<Assignment> {
     const course = await this.findCourseOrFail(courseId);
     this.courseOwnershipPolicy.assertTutorOwnsCourse(course.tutorId, userId);
-
-    // H-1: Validate dueDate is not in the past
-    if (dto.dueDate && new Date(dto.dueDate) < new Date()) {
-      throw new BadRequestException(ERROR_MESSAGES.DUE_DATE_IN_PAST);
-    }
-
-    const assignment = this.assignmentRepository.create({
-      title: dto.title,
-      description: dto.description,
-      courseId,
-      dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
-    });
-
+    this.validateDueDate(dto.dueDate);
+    const assignment = this.createAssignmentEntity(courseId, dto);
     return this.assignmentRepository.save(assignment);
   }
 
@@ -98,5 +87,24 @@ export class AssignmentsService {
     }
 
     await this.courseEnrollmentPolicy.assertStudentEnrolled(userId, course.id);
+  }
+
+  private validateDueDate(dueDate?: string): void {
+    // H-1: Validate dueDate is not in the past
+    if (dueDate && new Date(dueDate) < new Date()) {
+      throw new BadRequestException(ERROR_MESSAGES.DUE_DATE_IN_PAST);
+    }
+  }
+
+  private createAssignmentEntity(
+    courseId: string,
+    dto: CreateAssignmentDto,
+  ): Assignment {
+    return this.assignmentRepository.create({
+      title: dto.title,
+      description: dto.description,
+      courseId,
+      dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
+    });
   }
 }
