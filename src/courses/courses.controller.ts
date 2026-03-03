@@ -43,9 +43,9 @@ export class CoursesController {
 
   @Post()
   @UseGuards(RolesGuard)
-  @Roles(Role.TUTOR, Role.ADMIN)
+  @Roles(Role.TUTOR)
   @ApiBearerAuth()
-  @ApiOperation({ summary: '강좌 생성 (TUTOR, ADMIN)' })
+  @ApiOperation({ summary: '강좌 생성 (TUTOR)' })
   @ApiResponse({
     status: 201,
     description: '생성 성공',
@@ -94,9 +94,9 @@ export class CoursesController {
 
   @Patch(':id')
   @UseGuards(RolesGuard)
-  @Roles(Role.TUTOR, Role.ADMIN)
+  @Roles(Role.TUTOR)
   @ApiBearerAuth()
-  @ApiOperation({ summary: '강좌 수정 (TUTOR, ADMIN)' })
+  @ApiOperation({ summary: '강좌 수정 (TUTOR)' })
   @ApiResponse({
     status: 200,
     description: '수정 성공',
@@ -120,10 +120,10 @@ export class CoursesController {
 
   @Delete(':id')
   @UseGuards(RolesGuard)
-  @Roles(Role.TUTOR, Role.ADMIN)
+  @Roles(Role.TUTOR)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiBearerAuth()
-  @ApiOperation({ summary: '강좌 삭제 (TUTOR, ADMIN)' })
+  @ApiOperation({ summary: '강좌 삭제 (TUTOR)' })
   @ApiResponse({ status: 204, description: '삭제 성공' })
   @ApiResponse({ status: 403, description: '권한 부족' })
   @ApiResponse({ status: 404, description: '강좌 없음' })
@@ -138,9 +138,9 @@ export class CoursesController {
 
   @Post(':id/lectures')
   @UseGuards(RolesGuard)
-  @Roles(Role.TUTOR, Role.ADMIN)
+  @Roles(Role.TUTOR)
   @ApiBearerAuth()
-  @ApiOperation({ summary: '강의 생성 (TUTOR, ADMIN)' })
+  @ApiOperation({ summary: '강의 생성 (TUTOR)' })
   @ApiResponse({
     status: 201,
     description: '생성 성공',
@@ -164,9 +164,9 @@ export class CoursesController {
 
   @Patch(':id/lectures/:lid')
   @UseGuards(RolesGuard)
-  @Roles(Role.TUTOR, Role.ADMIN)
+  @Roles(Role.TUTOR)
   @ApiBearerAuth()
-  @ApiOperation({ summary: '강의 수정 (TUTOR, ADMIN)' })
+  @ApiOperation({ summary: '강의 수정 (TUTOR)' })
   @ApiResponse({
     status: 200,
     description: '수정 성공',
@@ -192,10 +192,10 @@ export class CoursesController {
 
   @Delete(':id/lectures/:lid')
   @UseGuards(RolesGuard)
-  @Roles(Role.TUTOR, Role.ADMIN)
+  @Roles(Role.TUTOR)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiBearerAuth()
-  @ApiOperation({ summary: '강의 삭제 (TUTOR, ADMIN)' })
+  @ApiOperation({ summary: '강의 삭제 (TUTOR)' })
   @ApiResponse({ status: 204, description: '삭제 성공' })
   @ApiResponse({ status: 403, description: '권한 부족' })
   @ApiResponse({ status: 404, description: '강좌 또는 강의 없음' })
