@@ -6,6 +6,7 @@ import { SubmissionsController } from './submissions.controller.js';
 import { AssignmentsModule } from '../assignments/assignments.module.js';
 import { EnrollmentsModule } from '../enrollments/enrollments.module.js';
 import { SubmissionAccessPolicy } from './policies/submission-access.policy.js';
+import { CourseOwnershipPolicy } from '../common/policies/course-ownership.policy.js';
 
 @Module({
   imports: [
@@ -16,6 +17,10 @@ import { SubmissionAccessPolicy } from './policies/submission-access.policy.js';
     EnrollmentsModule,
   ],
   controllers: [SubmissionsController],
-  providers: [SubmissionsService, SubmissionAccessPolicy],
+  providers: [
+    SubmissionsService,
+    SubmissionAccessPolicy,
+    CourseOwnershipPolicy,
+  ],
 })
 export class SubmissionsModule {}

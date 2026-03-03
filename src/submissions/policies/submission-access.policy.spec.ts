@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { SubmissionAccessPolicy } from './submission-access.policy.js';
 import { EnrollmentsService } from '../../enrollments/enrollments.service.js';
 import { Role } from '../../common/enums/index.js';
+import { CourseOwnershipPolicy } from '../../common/policies/course-ownership.policy.js';
 
 describe('SubmissionAccessPolicy', () => {
   let policy: SubmissionAccessPolicy;
@@ -16,6 +17,7 @@ describe('SubmissionAccessPolicy', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SubmissionAccessPolicy,
+        CourseOwnershipPolicy,
         {
           provide: EnrollmentsService,
           useValue: enrollmentsService,

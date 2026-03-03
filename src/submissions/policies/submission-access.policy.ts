@@ -2,6 +2,7 @@ import { ForbiddenException, Injectable } from '@nestjs/common';
 import { EnrollmentsService } from '../../enrollments/enrollments.service.js';
 import { Role } from '../../common/enums/index.js';
 import { ERROR_MESSAGES } from '../../common/constants/error-messages.constant.js';
+import { CourseOwnershipPolicy } from '../../common/policies/course-ownership.policy.js';
 
 export interface SubmissionFilter {
   assignmentId: string;
@@ -18,12 +19,13 @@ export interface BuildSubmissionFilterInput {
 
 @Injectable()
 export class SubmissionAccessPolicy {
-  constructor(private readonly enrollmentsService: EnrollmentsService) {}
+  constructor(
+    private readonly enrollmentsService: EnrollmentsService,
+    private readonly courseOwnershipPolicy: CourseOwnershipPolicy,
+  ) {}
 
   assertTutorOwnsCourse(tutorId: string, userId: string): void {
-    if (tutorId !== userId) {
-      throw new ForbiddenException(ERROR_MESSAGES.NOT_COURSE_OWNER);
-    }
+    this.courseOwnershipPolicy.assertTutorOwnsCourse(tutorId, userId);
   }
 
   async assertStudentEnrolled(

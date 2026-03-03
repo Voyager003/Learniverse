@@ -1,11 +1,17 @@
 import { ForbiddenException } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
 import { CourseAccessPolicy } from './course-access.policy.js';
+import { CourseOwnershipPolicy } from '../../common/policies/course-ownership.policy.js';
 
 describe('CourseAccessPolicy', () => {
   let policy: CourseAccessPolicy;
 
-  beforeEach(() => {
-    policy = new CourseAccessPolicy();
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [CourseAccessPolicy, CourseOwnershipPolicy],
+    }).compile();
+
+    policy = module.get<CourseAccessPolicy>(CourseAccessPolicy);
   });
 
   describe('assertTutorOwnsCourse', () => {

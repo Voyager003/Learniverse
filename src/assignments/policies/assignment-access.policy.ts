@@ -3,15 +3,17 @@ import { Course } from '../../courses/entities/course.entity.js';
 import { EnrollmentsService } from '../../enrollments/enrollments.service.js';
 import { Role } from '../../common/enums/index.js';
 import { ERROR_MESSAGES } from '../../common/constants/error-messages.constant.js';
+import { CourseOwnershipPolicy } from '../../common/policies/course-ownership.policy.js';
 
 @Injectable()
 export class AssignmentAccessPolicy {
-  constructor(private readonly enrollmentsService: EnrollmentsService) {}
+  constructor(
+    private readonly enrollmentsService: EnrollmentsService,
+    private readonly courseOwnershipPolicy: CourseOwnershipPolicy,
+  ) {}
 
   assertTutorOwnsCourse(course: Pick<Course, 'tutorId'>, userId: string): void {
-    if (course.tutorId !== userId) {
-      throw new ForbiddenException(ERROR_MESSAGES.NOT_COURSE_OWNER);
-    }
+    this.courseOwnershipPolicy.assertTutorOwnsCourse(course.tutorId, userId);
   }
 
   async assertCanReadCourseAssignments(
