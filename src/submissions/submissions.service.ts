@@ -19,6 +19,11 @@ interface MongoError extends Error {
   code?: number;
 }
 
+interface SubmissionFilter {
+  assignmentId: string;
+  studentId?: string;
+}
+
 @Injectable()
 export class SubmissionsService {
   constructor(
@@ -42,13 +47,7 @@ export class SubmissionsService {
     }
 
     // Verify student is enrolled
-    const enrolled = await this.enrollmentsService.isEnrolled(
-      studentId,
-      assignment.courseId,
-    );
-    if (!enrolled) {
-      throw new ForbiddenException(ERROR_MESSAGES.NOT_ENROLLED_IN_COURSE);
-    }
+    await this.assertStudentEnrolled(studentId, assignment.courseId);
 
     // C-2: Check for duplicate submission (app-level)
     const existing = await this.submissionModel.findOne({
@@ -82,30 +81,12 @@ export class SubmissionsService {
     role: Role,
   ): Promise<SubmissionDocument[]> {
     const assignment = await this.assignmentsService.findOne(assignmentId);
-
-    interface SubmissionFilter {
-      assignmentId: string;
-      studentId?: string;
-    }
-
-    const filter: SubmissionFilter = { assignmentId };
-
-    if (role === Role.TUTOR) {
-      // Tutor must own the course
-      if (assignment.course.tutorId !== userId) {
-        throw new ForbiddenException(ERROR_MESSAGES.NOT_COURSE_OWNER);
-      }
-    } else {
-      // STUDENT: verify enrollment and filter to own submissions
-      const enrolled = await this.enrollmentsService.isEnrolled(
-        userId,
-        assignment.courseId,
-      );
-      if (!enrolled) {
-        throw new ForbiddenException(ERROR_MESSAGES.NOT_ENROLLED_IN_COURSE);
-      }
-      filter.studentId = userId;
-    }
+    const filter = await this.buildSubmissionFilter(
+      assignmentId,
+      assignment,
+      userId,
+      role,
+    );
 
     return this.submissionModel.find(filter).sort({ createdAt: -1 }).exec();
   }
@@ -137,9 +118,7 @@ export class SubmissionsService {
     const assignment = await this.assignmentsService.findOne(
       submission.assignmentId,
     );
-    if (assignment.course.tutorId !== userId) {
-      throw new ForbiddenException(ERROR_MESSAGES.NOT_COURSE_OWNER);
-    }
+    this.assertTutorOwnsCourse(assignment.course.tutorId, userId);
 
     submission.feedback = dto.feedback;
     submission.reviewedAt = new Date();
@@ -152,5 +131,39 @@ export class SubmissionsService {
     }
 
     return submission.save();
+  }
+
+  private async buildSubmissionFilter(
+    assignmentId: string,
+    assignment: { courseId: string; course: { tutorId: string } },
+    userId: string,
+    role: Role,
+  ): Promise<SubmissionFilter> {
+    if (role === Role.TUTOR) {
+      this.assertTutorOwnsCourse(assignment.course.tutorId, userId);
+      return { assignmentId };
+    }
+
+    await this.assertStudentEnrolled(userId, assignment.courseId);
+    return { assignmentId, studentId: userId };
+  }
+
+  private async assertStudentEnrolled(
+    studentId: string,
+    courseId: string,
+  ): Promise<void> {
+    const enrolled = await this.enrollmentsService.isEnrolled(
+      studentId,
+      courseId,
+    );
+    if (!enrolled) {
+      throw new ForbiddenException(ERROR_MESSAGES.NOT_ENROLLED_IN_COURSE);
+    }
+  }
+
+  private assertTutorOwnsCourse(tutorId: string, userId: string): void {
+    if (tutorId !== userId) {
+      throw new ForbiddenException(ERROR_MESSAGES.NOT_COURSE_OWNER);
+    }
   }
 }
