@@ -53,15 +53,7 @@ export class AssignmentsService {
     role: Role,
   ): Promise<Assignment[]> {
     const course = await this.findCourseOrFail(courseId);
-
-    if (role === Role.TUTOR) {
-      this.courseOwnershipPolicy.assertTutorOwnsCourse(course.tutorId, userId);
-    } else {
-      await this.courseEnrollmentPolicy.assertStudentEnrolled(
-        userId,
-        course.id,
-      );
-    }
+    await this.authorizeCourseReader(course, userId, role);
 
     return this.assignmentRepository.find({
       where: { courseId },
@@ -93,5 +85,18 @@ export class AssignmentsService {
     }
 
     return course;
+  }
+
+  private async authorizeCourseReader(
+    course: Pick<Course, 'id' | 'tutorId'>,
+    userId: string,
+    role: Role,
+  ): Promise<void> {
+    if (role === Role.TUTOR) {
+      this.courseOwnershipPolicy.assertTutorOwnsCourse(course.tutorId, userId);
+      return;
+    }
+
+    await this.courseEnrollmentPolicy.assertStudentEnrolled(userId, course.id);
   }
 }
