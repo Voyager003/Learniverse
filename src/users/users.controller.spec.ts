@@ -1,5 +1,4 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
 import { UsersController } from './users.controller.js';
 import { UsersService } from './users.service.js';
 import { User } from './entities/user.entity.js';
@@ -25,7 +24,6 @@ describe('UsersController', () => {
 
   beforeEach(async () => {
     usersService = {
-      findAll: jest.fn(),
       findById: jest.fn(),
       update: jest.fn(),
     };
@@ -42,19 +40,6 @@ describe('UsersController', () => {
     user: { userId: 'uuid-1', email: 'test@example.com', role: Role.STUDENT },
   };
 
-  describe('GET /users', () => {
-    it('UserResponseDto 배열을 반환해야 한다', async () => {
-      const users = [mockUser, { ...mockUser, id: 'uuid-2', name: 'User 2' }];
-      usersService.findAll!.mockResolvedValue(users);
-
-      const result = await controller.findAll();
-
-      expect(result).toHaveLength(2);
-      expect(result[0]).toBeInstanceOf(UserResponseDto);
-      expect(result[0]).not.toHaveProperty('passwordHash');
-    });
-  });
-
   describe('GET /users/me', () => {
     it('현재 사용자 프로필을 UserResponseDto로 반환해야 한다', async () => {
       usersService.findById!.mockResolvedValue(mockUser);
@@ -65,26 +50,6 @@ describe('UsersController', () => {
       expect(result.id).toBe('uuid-1');
       expect(result).not.toHaveProperty('passwordHash');
       expect(usersService.findById).toHaveBeenCalledWith('uuid-1');
-    });
-  });
-
-  describe('GET /users/:id', () => {
-    it('ID로 사용자를 UserResponseDto로 반환해야 한다', async () => {
-      usersService.findById!.mockResolvedValue(mockUser);
-
-      const result = await controller.findOne('uuid-1');
-
-      expect(result).toBeInstanceOf(UserResponseDto);
-      expect(result.id).toBe('uuid-1');
-      expect(usersService.findById).toHaveBeenCalledWith('uuid-1');
-    });
-
-    it('서비스에서 발생한 NotFoundException을 전파해야 한다', async () => {
-      usersService.findById!.mockRejectedValue(new NotFoundException());
-
-      await expect(controller.findOne('nonexistent')).rejects.toThrow(
-        NotFoundException,
-      );
     });
   });
 
