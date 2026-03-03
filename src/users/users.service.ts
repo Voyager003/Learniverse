@@ -40,7 +40,35 @@ export class UsersService {
     if (existing) {
       throw new ConflictException(ERROR_MESSAGES.EMAIL_ALREADY_EXISTS);
     }
-    const user = this.usersRepository.create(data);
+
+    return this.saveUserSafely(this.usersRepository.create(data));
+  }
+
+  async update(id: string, data: Partial<Pick<User, 'name'>>): Promise<User> {
+    return this.updateUser(id, (user) => {
+      Object.assign(user, data);
+    });
+  }
+
+  async updateRefreshToken(
+    id: string,
+    refreshToken: string | null,
+  ): Promise<User> {
+    return this.updateUser(id, (user) => {
+      user.refreshToken = refreshToken;
+    });
+  }
+
+  private async updateUser(
+    id: string,
+    mutate: (user: User) => void,
+  ): Promise<User> {
+    const user = await this.findById(id);
+    mutate(user);
+    return this.saveUserSafely(user);
+  }
+
+  private async saveUserSafely(user: User): Promise<User> {
     try {
       return await this.usersRepository.save(user);
     } catch (error: unknown) {
@@ -53,20 +81,5 @@ export class UsersService {
       }
       throw error;
     }
-  }
-
-  async update(id: string, data: Partial<Pick<User, 'name'>>): Promise<User> {
-    const user = await this.findById(id);
-    Object.assign(user, data);
-    return this.usersRepository.save(user);
-  }
-
-  async updateRefreshToken(
-    id: string,
-    refreshToken: string | null,
-  ): Promise<User> {
-    const user = await this.findById(id);
-    user.refreshToken = refreshToken;
-    return this.usersRepository.save(user);
   }
 }
