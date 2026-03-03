@@ -340,7 +340,6 @@ describe('SubmissionsService', () => {
         'submission-id',
         'assignment-uuid',
         'tutor-uuid',
-        Role.TUTOR,
         feedbackDto,
       );
 
@@ -367,7 +366,6 @@ describe('SubmissionsService', () => {
         'submission-id',
         'assignment-uuid',
         'tutor-uuid',
-        Role.TUTOR,
         {
           feedback: '수정이 필요합니다.',
         },
@@ -391,7 +389,6 @@ describe('SubmissionsService', () => {
           'submission-id',
           'assignment-uuid',
           'other-tutor',
-          Role.TUTOR,
           feedbackDto,
         ),
       ).rejects.toThrow(ForbiddenException);
@@ -405,7 +402,6 @@ describe('SubmissionsService', () => {
           'nonexistent',
           'assignment-uuid',
           'tutor-uuid',
-          Role.TUTOR,
           feedbackDto,
         ),
       ).rejects.toThrow(NotFoundException);
@@ -427,7 +423,6 @@ describe('SubmissionsService', () => {
           'submission-id',
           'assignment-uuid',
           'tutor-uuid',
-          Role.TUTOR,
           feedbackDto,
         ),
       ).rejects.toThrow(ConflictException);
@@ -450,7 +445,6 @@ describe('SubmissionsService', () => {
         'submission-id',
         'assignment-uuid',
         'tutor-uuid',
-        Role.TUTOR,
         feedbackDto,
       );
 
@@ -473,7 +467,6 @@ describe('SubmissionsService', () => {
           'submission-id',
           'assignment-uuid',
           'tutor-uuid',
-          Role.TUTOR,
           feedbackDto,
         ),
       ).rejects.toThrow(BadRequestException);

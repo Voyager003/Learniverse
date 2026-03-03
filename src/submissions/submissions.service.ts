@@ -114,7 +114,6 @@ export class SubmissionsService {
     submissionId: string,
     assignmentId: string,
     userId: string,
-    role: Role,
     dto: AddFeedbackDto,
   ): Promise<SubmissionDocument> {
     const submission = await this.submissionModel.findById(submissionId);
@@ -138,7 +137,7 @@ export class SubmissionsService {
     const assignment = await this.assignmentsService.findOne(
       submission.assignmentId,
     );
-    if (role !== Role.TUTOR || assignment.course.tutorId !== userId) {
+    if (assignment.course.tutorId !== userId) {
       throw new ForbiddenException(ERROR_MESSAGES.NOT_COURSE_OWNER);
     }
 

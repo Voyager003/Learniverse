@@ -97,7 +97,6 @@ export class SubmissionsController {
       submissionId,
       assignmentId,
       req.user.userId,
-      req.user.role,
       dto,
     );
     return SubmissionResponseDto.from(submission);
