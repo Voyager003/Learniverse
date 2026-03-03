@@ -84,7 +84,6 @@ describe('AssignmentsService', () => {
       const result = await service.create(
         'course-uuid',
         'tutor-uuid',
-        Role.TUTOR,
         dto,
       );
 
@@ -104,7 +103,7 @@ describe('AssignmentsService', () => {
       courseRepository.findOne!.mockResolvedValue(course);
 
       await expect(
-        service.create('course-uuid', 'tutor-uuid', Role.TUTOR, dto),
+        service.create('course-uuid', 'tutor-uuid', dto),
       ).rejects.toThrow(ForbiddenException);
     });
 
@@ -112,7 +111,7 @@ describe('AssignmentsService', () => {
       courseRepository.findOne!.mockResolvedValue(null);
 
       await expect(
-        service.create('nonexistent', 'tutor-uuid', Role.TUTOR, dto),
+        service.create('nonexistent', 'tutor-uuid', dto),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -126,7 +125,7 @@ describe('AssignmentsService', () => {
       courseRepository.findOne!.mockResolvedValue(course);
 
       await expect(
-        service.create('course-uuid', 'tutor-uuid', Role.TUTOR, dtoWithPastDue),
+        service.create('course-uuid', 'tutor-uuid', dtoWithPastDue),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -142,7 +141,7 @@ describe('AssignmentsService', () => {
       assignmentRepository.create!.mockReturnValue(assignment);
       assignmentRepository.save!.mockResolvedValue(assignment);
 
-      await service.create('course-uuid', 'tutor-uuid', Role.TUTOR, dtoWithDue);
+      await service.create('course-uuid', 'tutor-uuid', dtoWithDue);
 
       expect(assignmentRepository.create).toHaveBeenCalledWith({
         title: dto.title,

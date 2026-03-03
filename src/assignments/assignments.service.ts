@@ -26,7 +26,6 @@ export class AssignmentsService {
   async create(
     courseId: string,
     userId: string,
-    role: Role,
     dto: CreateAssignmentDto,
   ): Promise<Assignment> {
     const course = await this.findCourseOrFail(courseId);

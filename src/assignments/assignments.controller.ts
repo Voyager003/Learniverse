@@ -47,7 +47,6 @@ export class AssignmentsController {
     const assignment = await this.assignmentsService.create(
       courseId,
       req.user.userId,
-      req.user.role,
       dto,
     );
     return AssignmentResponseDto.from(assignment);
