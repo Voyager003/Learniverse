@@ -13,6 +13,7 @@ import { AddFeedbackDto } from './dto/add-feedback.dto.js';
 import { SubmissionStatus, Role } from '../common/enums/index.js';
 import { ERROR_MESSAGES } from '../common/constants/error-messages.constant.js';
 import { SubmissionAccessPolicy } from './policies/submission-access.policy.js';
+import { CourseEnrollmentPolicy } from '../common/policies/course-enrollment.policy.js';
 import { CourseOwnershipPolicy } from '../common/policies/course-ownership.policy.js';
 
 interface MongoError extends Error {
@@ -26,6 +27,7 @@ export class SubmissionsService {
     private readonly submissionModel: Model<SubmissionDocument>,
     private readonly assignmentsService: AssignmentsService,
     private readonly submissionAccessPolicy: SubmissionAccessPolicy,
+    private readonly courseEnrollmentPolicy: CourseEnrollmentPolicy,
     private readonly courseOwnershipPolicy: CourseOwnershipPolicy,
   ) {}
 
@@ -43,7 +45,7 @@ export class SubmissionsService {
     }
 
     // Verify student is enrolled
-    await this.submissionAccessPolicy.assertStudentEnrolled(
+    await this.courseEnrollmentPolicy.assertStudentEnrolled(
       studentId,
       assignment.courseId,
     );

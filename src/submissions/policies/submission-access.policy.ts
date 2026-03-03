@@ -23,16 +23,6 @@ export class SubmissionAccessPolicy {
     private readonly courseOwnershipPolicy: CourseOwnershipPolicy,
   ) {}
 
-  async assertStudentEnrolled(
-    studentId: string,
-    courseId: string,
-  ): Promise<void> {
-    await this.courseEnrollmentPolicy.assertStudentEnrolled(
-      studentId,
-      courseId,
-    );
-  }
-
   async buildSubmissionFilter(
     input: BuildSubmissionFilterInput,
   ): Promise<SubmissionFilter> {
@@ -43,7 +33,7 @@ export class SubmissionAccessPolicy {
       return { assignmentId };
     }
 
-    await this.assertStudentEnrolled(userId, courseId);
+    await this.courseEnrollmentPolicy.assertStudentEnrolled(userId, courseId);
     return { assignmentId, studentId: userId };
   }
 }

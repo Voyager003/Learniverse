@@ -30,24 +30,6 @@ describe('SubmissionAccessPolicy', () => {
     policy = module.get<SubmissionAccessPolicy>(SubmissionAccessPolicy);
   });
 
-  describe('assertStudentEnrolled', () => {
-    it('수강 중인 학생이면 예외 없이 통과해야 한다', async () => {
-      enrollmentsService.isEnrolled!.mockResolvedValue(true);
-
-      await expect(
-        policy.assertStudentEnrolled('student-1', 'course-1'),
-      ).resolves.toBeUndefined();
-    });
-
-    it('미수강 학생이면 ForbiddenException을 던져야 한다', async () => {
-      enrollmentsService.isEnrolled!.mockResolvedValue(false);
-
-      await expect(
-        policy.assertStudentEnrolled('student-1', 'course-1'),
-      ).rejects.toThrow(ForbiddenException);
-    });
-  });
-
   describe('buildSubmissionFilter', () => {
     it('튜터는 assignmentId 기준 필터를 반환해야 한다', async () => {
       await expect(

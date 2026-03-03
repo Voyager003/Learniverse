@@ -15,6 +15,7 @@ import { SubmissionStatus, Role } from '../common/enums/index.js';
 import { CreateSubmissionDto } from './dto/create-submission.dto.js';
 import { AddFeedbackDto } from './dto/add-feedback.dto.js';
 import { SubmissionAccessPolicy } from './policies/submission-access.policy.js';
+import { CourseEnrollmentPolicy } from '../common/policies/course-enrollment.policy.js';
 import { CourseOwnershipPolicy } from '../common/policies/course-ownership.policy.js';
 
 interface MockSubmission {
@@ -41,6 +42,9 @@ describe('SubmissionsService', () => {
   let submissionAccessPolicy: Partial<
     Record<keyof SubmissionAccessPolicy, jest.Mock>
   >;
+  let courseEnrollmentPolicy: Partial<
+    Record<keyof CourseEnrollmentPolicy, jest.Mock>
+  >;
   let courseOwnershipPolicy: Partial<
     Record<keyof CourseOwnershipPolicy, jest.Mock>
   >;
@@ -58,8 +62,10 @@ describe('SubmissionsService', () => {
     };
 
     submissionAccessPolicy = {
-      assertStudentEnrolled: jest.fn(),
       buildSubmissionFilter: jest.fn(),
+    };
+    courseEnrollmentPolicy = {
+      assertStudentEnrolled: jest.fn(),
     };
     courseOwnershipPolicy = {
       assertTutorOwnsCourse: jest.fn(),
@@ -79,6 +85,10 @@ describe('SubmissionsService', () => {
         {
           provide: SubmissionAccessPolicy,
           useValue: submissionAccessPolicy,
+        },
+        {
+          provide: CourseEnrollmentPolicy,
+          useValue: courseEnrollmentPolicy,
         },
         {
           provide: CourseOwnershipPolicy,
@@ -113,7 +123,7 @@ describe('SubmissionsService', () => {
       };
 
       assignmentsService.findOne!.mockResolvedValue(mockAssignment);
-      submissionAccessPolicy.assertStudentEnrolled!.mockResolvedValue(
+      courseEnrollmentPolicy.assertStudentEnrolled!.mockResolvedValue(
         undefined,
       );
       submissionModel.findOne.mockResolvedValue(null);
@@ -129,7 +139,7 @@ describe('SubmissionsService', () => {
       expect(assignmentsService.findOne).toHaveBeenCalledWith(
         'assignment-uuid',
       );
-      expect(submissionAccessPolicy.assertStudentEnrolled).toHaveBeenCalledWith(
+      expect(courseEnrollmentPolicy.assertStudentEnrolled).toHaveBeenCalledWith(
         'student-uuid',
         'course-uuid',
       );
@@ -137,7 +147,7 @@ describe('SubmissionsService', () => {
 
     it('수강하지 않은 학생이면 ForbiddenException을 던져야 한다', async () => {
       assignmentsService.findOne!.mockResolvedValue(mockAssignment);
-      submissionAccessPolicy.assertStudentEnrolled!.mockRejectedValue(
+      courseEnrollmentPolicy.assertStudentEnrolled!.mockRejectedValue(
         new ForbiddenException(),
       );
 
@@ -148,7 +158,7 @@ describe('SubmissionsService', () => {
 
     it('이미 제출한 과제이면 ConflictException을 던져야 한다', async () => {
       assignmentsService.findOne!.mockResolvedValue(mockAssignment);
-      submissionAccessPolicy.assertStudentEnrolled!.mockResolvedValue(
+      courseEnrollmentPolicy.assertStudentEnrolled!.mockResolvedValue(
         undefined,
       );
       submissionModel.findOne.mockResolvedValue({ _id: 'existing' });
@@ -160,7 +170,7 @@ describe('SubmissionsService', () => {
 
     it('MongoDB unique index 위반 시 ConflictException을 던져야 한다', async () => {
       assignmentsService.findOne!.mockResolvedValue(mockAssignment);
-      submissionAccessPolicy.assertStudentEnrolled!.mockResolvedValue(
+      courseEnrollmentPolicy.assertStudentEnrolled!.mockResolvedValue(
         undefined,
       );
       submissionModel.findOne.mockResolvedValue(null);
@@ -209,7 +219,7 @@ describe('SubmissionsService', () => {
       };
 
       assignmentsService.findOne!.mockResolvedValue(noDueAssignment);
-      submissionAccessPolicy.assertStudentEnrolled!.mockResolvedValue(
+      courseEnrollmentPolicy.assertStudentEnrolled!.mockResolvedValue(
         undefined,
       );
       submissionModel.findOne.mockResolvedValue(null);
@@ -243,7 +253,7 @@ describe('SubmissionsService', () => {
       };
 
       assignmentsService.findOne!.mockResolvedValue(mockAssignment);
-      submissionAccessPolicy.assertStudentEnrolled!.mockResolvedValue(
+      courseEnrollmentPolicy.assertStudentEnrolled!.mockResolvedValue(
         undefined,
       );
       submissionModel.findOne.mockResolvedValue(null);
