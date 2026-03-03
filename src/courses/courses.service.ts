@@ -83,22 +83,23 @@ export class CoursesService {
     userId: string,
     dto: CreateLectureDto,
   ): Promise<Lecture> {
-    await this.findByIdAndVerifyOwner(courseId, userId);
-    const lecture = this.lectureRepository.create({ ...dto, courseId });
-    try {
-      return await this.lectureRepository.save(lecture);
-    } catch (error: unknown) {
-      if (
-        error instanceof QueryFailedError &&
-        (error.driverError as Record<string, unknown>)['code'] ===
-          UNIQUE_VIOLATION_CODE
-      ) {
-        throw new ConflictException(
-          `Lecture order ${dto.order} already exists in this course`,
-        );
+    return this.runWithinOwnedCourse(courseId, userId, async () => {
+      const lecture = this.lectureRepository.create({ ...dto, courseId });
+      try {
+        return await this.lectureRepository.save(lecture);
+      } catch (error: unknown) {
+        if (
+          error instanceof QueryFailedError &&
+          (error.driverError as Record<string, unknown>)['code'] ===
+            UNIQUE_VIOLATION_CODE
+        ) {
+          throw new ConflictException(
+            `Lecture order ${dto.order} already exists in this course`,
+          );
+        }
+        throw error;
       }
-      throw error;
-    }
+    });
   }
 
   async updateLecture(
@@ -107,10 +108,11 @@ export class CoursesService {
     userId: string,
     dto: UpdateLectureDto,
   ): Promise<Lecture> {
-    await this.findByIdAndVerifyOwner(courseId, userId);
-    const lecture = await this.findLectureOrFail(courseId, lectureId);
-    Object.assign(lecture, dto);
-    return this.lectureRepository.save(lecture);
+    return this.runWithinOwnedCourse(courseId, userId, async () => {
+      const lecture = await this.findLectureOrFail(courseId, lectureId);
+      Object.assign(lecture, dto);
+      return this.lectureRepository.save(lecture);
+    });
   }
 
   async removeLecture(
@@ -118,9 +120,10 @@ export class CoursesService {
     lectureId: string,
     userId: string,
   ): Promise<void> {
-    await this.findByIdAndVerifyOwner(courseId, userId);
-    const lecture = await this.findLectureOrFail(courseId, lectureId);
-    await this.lectureRepository.remove(lecture);
+    await this.runWithinOwnedCourse(courseId, userId, async () => {
+      const lecture = await this.findLectureOrFail(courseId, lectureId);
+      await this.lectureRepository.remove(lecture);
+    });
   }
 
   // --- Private helpers ---
@@ -188,5 +191,14 @@ export class CoursesService {
     qb.orderBy('course.createdAt', 'DESC')
       .skip((page - 1) * limit)
       .take(limit);
+  }
+
+  private async runWithinOwnedCourse<T>(
+    courseId: string,
+    userId: string,
+    action: () => Promise<T>,
+  ): Promise<T> {
+    await this.findByIdAndVerifyOwner(courseId, userId);
+    return action();
   }
 }
