@@ -66,14 +66,16 @@ export class CoursesService {
     userId: string,
     dto: UpdateCourseDto,
   ): Promise<Course> {
-    const course = await this.findByIdAndVerifyOwner(id, userId);
-    Object.assign(course, dto);
-    return this.courseRepository.save(course);
+    return this.runWithinOwnedCourse(id, userId, async (course) => {
+      Object.assign(course, dto);
+      return this.courseRepository.save(course);
+    });
   }
 
   async remove(id: string, userId: string): Promise<void> {
-    const course = await this.findByIdAndVerifyOwner(id, userId);
-    await this.courseRepository.remove(course);
+    await this.runWithinOwnedCourse(id, userId, async (course) => {
+      await this.courseRepository.remove(course);
+    });
   }
 
   // --- Lecture CRUD ---
@@ -196,9 +198,9 @@ export class CoursesService {
   private async runWithinOwnedCourse<T>(
     courseId: string,
     userId: string,
-    action: () => Promise<T>,
+    action: (course: Course) => Promise<T>,
   ): Promise<T> {
-    await this.findByIdAndVerifyOwner(courseId, userId);
-    return action();
+    const course = await this.findByIdAndVerifyOwner(courseId, userId);
+    return action(course);
   }
 }
