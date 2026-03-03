@@ -4,20 +4,16 @@ import { Assignment } from './entities/assignment.entity.js';
 import { Course } from '../courses/entities/course.entity.js';
 import { AssignmentsService } from './assignments.service.js';
 import { AssignmentsController } from './assignments.controller.js';
-import { EnrollmentsModule } from '../enrollments/enrollments.module.js';
 import { AssignmentAccessPolicy } from './policies/assignment-access.policy.js';
-import { CourseEnrollmentPolicy } from '../common/policies/course-enrollment.policy.js';
-import { CourseOwnershipPolicy } from '../common/policies/course-ownership.policy.js';
+import { CommonPoliciesModule } from '../common/policies/common-policies.module.js';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Assignment, Course]), EnrollmentsModule],
-  controllers: [AssignmentsController],
-  providers: [
-    AssignmentsService,
-    AssignmentAccessPolicy,
-    CourseEnrollmentPolicy,
-    CourseOwnershipPolicy,
+  imports: [
+    TypeOrmModule.forFeature([Assignment, Course]),
+    CommonPoliciesModule,
   ],
+  controllers: [AssignmentsController],
+  providers: [AssignmentsService, AssignmentAccessPolicy],
   exports: [AssignmentsService],
 })
 export class AssignmentsModule {}

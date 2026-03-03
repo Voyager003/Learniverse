@@ -5,12 +5,12 @@ import { Lecture } from './entities/lecture.entity.js';
 import { CoursesService } from './courses.service.js';
 import { CoursesController } from './courses.controller.js';
 import { CourseAccessPolicy } from './policies/course-access.policy.js';
-import { CourseOwnershipPolicy } from '../common/policies/course-ownership.policy.js';
+import { CommonPoliciesModule } from '../common/policies/common-policies.module.js';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Course, Lecture])],
+  imports: [TypeOrmModule.forFeature([Course, Lecture]), CommonPoliciesModule],
   controllers: [CoursesController],
-  providers: [CoursesService, CourseAccessPolicy, CourseOwnershipPolicy],
+  providers: [CoursesService, CourseAccessPolicy],
   exports: [CoursesService],
 })
 export class CoursesModule {}
