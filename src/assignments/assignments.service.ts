@@ -30,7 +30,7 @@ export class AssignmentsService {
     dto: CreateAssignmentDto,
   ): Promise<Assignment> {
     const course = await this.findCourseOrFail(courseId);
-    this.verifyOwnership(course, userId, role);
+    this.verifyOwnership(course, userId);
 
     // H-1: Validate dueDate is not in the past
     if (dto.dueDate && new Date(dto.dueDate) < new Date()) {
@@ -54,9 +54,7 @@ export class AssignmentsService {
   ): Promise<Assignment[]> {
     const course = await this.findCourseOrFail(courseId);
 
-    if (role === Role.ADMIN) {
-      // ADMIN can access all courses
-    } else if (role === Role.TUTOR) {
+    if (role === Role.TUTOR) {
       if (course.tutorId !== userId) {
         throw new ForbiddenException(ERROR_MESSAGES.NOT_COURSE_OWNER);
       }
@@ -103,8 +101,7 @@ export class AssignmentsService {
     return course;
   }
 
-  private verifyOwnership(course: Course, userId: string, role: Role): void {
-    if (role === Role.ADMIN) return;
+  private verifyOwnership(course: Course, userId: string): void {
     if (course.tutorId !== userId) {
       throw new ForbiddenException(ERROR_MESSAGES.NOT_COURSE_OWNER);
     }

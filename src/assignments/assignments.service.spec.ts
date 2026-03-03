@@ -96,27 +96,6 @@ describe('AssignmentsService', () => {
       });
     });
 
-    it('ADMIN은 모든 강좌에 과제를 생성할 수 있어야 한다', async () => {
-      const course = {
-        id: 'course-uuid',
-        tutorId: 'other-tutor',
-      } as Course;
-      const assignment = { id: 'assignment-uuid' } as Assignment;
-
-      courseRepository.findOne!.mockResolvedValue(course);
-      assignmentRepository.create!.mockReturnValue(assignment);
-      assignmentRepository.save!.mockResolvedValue(assignment);
-
-      const result = await service.create(
-        'course-uuid',
-        'admin-uuid',
-        Role.ADMIN,
-        dto,
-      );
-
-      expect(result).toEqual(assignment);
-    });
-
     it('소유자가 아닌 Tutor이면 ForbiddenException을 던져야 한다', async () => {
       const course = {
         id: 'course-uuid',
@@ -228,25 +207,6 @@ describe('AssignmentsService', () => {
       await expect(
         service.findByCourse('course-uuid', 'student-uuid', Role.STUDENT),
       ).rejects.toThrow(ForbiddenException);
-    });
-
-    it('ADMIN은 모든 강좌의 과제를 조회할 수 있어야 한다', async () => {
-      const course = {
-        id: 'course-uuid',
-        tutorId: 'other-tutor',
-      } as Course;
-      const assignments = [{ id: 'a1' }] as Assignment[];
-
-      courseRepository.findOne!.mockResolvedValue(course);
-      assignmentRepository.find!.mockResolvedValue(assignments);
-
-      const result = await service.findByCourse(
-        'course-uuid',
-        'admin-uuid',
-        Role.ADMIN,
-      );
-
-      expect(result).toEqual(assignments);
     });
 
     it('소유자가 아닌 Tutor이면 ForbiddenException을 던져야 한다', async () => {
