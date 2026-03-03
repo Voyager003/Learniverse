@@ -9,9 +9,9 @@ import { ObjectLiteral, Repository } from 'typeorm';
 import { AssignmentsService } from './assignments.service.js';
 import { Assignment } from './entities/assignment.entity.js';
 import { Course } from '../courses/entities/course.entity.js';
-import { EnrollmentsService } from '../enrollments/enrollments.service.js';
 import { Role } from '../common/enums/index.js';
 import { CreateAssignmentDto } from './dto/create-assignment.dto.js';
+import { AssignmentAccessPolicy } from './policies/assignment-access.policy.js';
 
 type MockRepository<T extends ObjectLiteral> = Partial<
   Record<keyof Repository<T>, jest.Mock>
@@ -31,13 +31,16 @@ describe('AssignmentsService', () => {
   let service: AssignmentsService;
   let assignmentRepository: MockRepository<Assignment>;
   let courseRepository: MockRepository<Course>;
-  let enrollmentsService: Partial<Record<keyof EnrollmentsService, jest.Mock>>;
+  let assignmentAccessPolicy: Partial<
+    Record<keyof AssignmentAccessPolicy, jest.Mock>
+  >;
 
   beforeEach(async () => {
     assignmentRepository = createMockRepository<Assignment>();
     courseRepository = createMockRepository<Course>();
-    enrollmentsService = {
-      isEnrolled: jest.fn(),
+    assignmentAccessPolicy = {
+      assertTutorOwnsCourse: jest.fn(),
+      assertCanReadCourseAssignments: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -52,8 +55,8 @@ describe('AssignmentsService', () => {
           useValue: courseRepository,
         },
         {
-          provide: EnrollmentsService,
-          useValue: enrollmentsService,
+          provide: AssignmentAccessPolicy,
+          useValue: assignmentAccessPolicy,
         },
       ],
     }).compile();
@@ -81,11 +84,7 @@ describe('AssignmentsService', () => {
       assignmentRepository.create!.mockReturnValue(assignment);
       assignmentRepository.save!.mockResolvedValue(assignment);
 
-      const result = await service.create(
-        'course-uuid',
-        'tutor-uuid',
-        dto,
-      );
+      const result = await service.create('course-uuid', 'tutor-uuid', dto);
 
       expect(result).toEqual(assignment);
       expect(assignmentRepository.create).toHaveBeenCalledWith({
@@ -93,14 +92,18 @@ describe('AssignmentsService', () => {
         courseId: 'course-uuid',
         dueDate: undefined,
       });
+      expect(assignmentAccessPolicy.assertTutorOwnsCourse).toHaveBeenCalledWith(
+        course,
+        'tutor-uuid',
+      );
     });
 
     it('소유자가 아닌 Tutor이면 ForbiddenException을 던져야 한다', async () => {
-      const course = {
-        id: 'course-uuid',
-        tutorId: 'other-tutor',
-      } as Course;
+      const course = { id: 'course-uuid', tutorId: 'other-tutor' } as Course;
       courseRepository.findOne!.mockResolvedValue(course);
+      assignmentAccessPolicy.assertTutorOwnsCourse!.mockImplementation(() => {
+        throw new ForbiddenException();
+      });
 
       await expect(
         service.create('course-uuid', 'tutor-uuid', dto),
@@ -181,7 +184,9 @@ describe('AssignmentsService', () => {
       const assignments = [{ id: 'a1' }] as Assignment[];
 
       courseRepository.findOne!.mockResolvedValue(course);
-      enrollmentsService.isEnrolled!.mockResolvedValue(true);
+      assignmentAccessPolicy.assertCanReadCourseAssignments!.mockResolvedValue(
+        undefined,
+      );
       assignmentRepository.find!.mockResolvedValue(assignments);
 
       const result = await service.findByCourse(
@@ -191,17 +196,18 @@ describe('AssignmentsService', () => {
       );
 
       expect(result).toEqual(assignments);
-      expect(enrollmentsService.isEnrolled).toHaveBeenCalledWith(
-        'student-uuid',
-        'course-uuid',
-      );
+      expect(
+        assignmentAccessPolicy.assertCanReadCourseAssignments,
+      ).toHaveBeenCalledWith(course, 'student-uuid', Role.STUDENT);
     });
 
     it('수강하지 않은 학생이면 ForbiddenException을 던져야 한다', async () => {
       const course = { id: 'course-uuid', tutorId: 'tutor-uuid' } as Course;
 
       courseRepository.findOne!.mockResolvedValue(course);
-      enrollmentsService.isEnrolled!.mockResolvedValue(false);
+      assignmentAccessPolicy.assertCanReadCourseAssignments!.mockRejectedValue(
+        new ForbiddenException(),
+      );
 
       await expect(
         service.findByCourse('course-uuid', 'student-uuid', Role.STUDENT),
@@ -209,11 +215,11 @@ describe('AssignmentsService', () => {
     });
 
     it('소유자가 아닌 Tutor이면 ForbiddenException을 던져야 한다', async () => {
-      const course = {
-        id: 'course-uuid',
-        tutorId: 'other-tutor',
-      } as Course;
+      const course = { id: 'course-uuid', tutorId: 'other-tutor' } as Course;
       courseRepository.findOne!.mockResolvedValue(course);
+      assignmentAccessPolicy.assertCanReadCourseAssignments!.mockRejectedValue(
+        new ForbiddenException(),
+      );
 
       await expect(
         service.findByCourse('course-uuid', 'tutor-uuid', Role.TUTOR),
