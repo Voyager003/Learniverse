@@ -61,10 +61,6 @@ export class UsersService {
     return this.usersRepository.save(user);
   }
 
-  async findAll(): Promise<User[]> {
-    return this.usersRepository.find();
-  }
-
   async updateRefreshToken(
     id: string,
     refreshToken: string | null,
