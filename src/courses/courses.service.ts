@@ -4,7 +4,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { QueryFailedError, Repository } from 'typeorm';
+import { QueryFailedError, Repository, SelectQueryBuilder } from 'typeorm';
 import { Course } from './entities/course.entity.js';
 import { Lecture } from './entities/lecture.entity.js';
 import { CreateCourseDto } from './dto/create-course.dto.js';
@@ -39,21 +39,9 @@ export class CoursesService {
     const { page, limit, category, difficulty } = query;
 
     const qb = this.courseQueryBuilder();
-
-    // Public endpoint: only show published courses
-    qb.where('course.isPublished = :isPublished', { isPublished: true });
-
-    if (category) {
-      qb.andWhere('course.category = :category', { category });
-    }
-
-    if (difficulty) {
-      qb.andWhere('course.difficulty = :difficulty', { difficulty });
-    }
-
-    qb.orderBy('course.createdAt', 'DESC')
-      .skip((page - 1) * limit)
-      .take(limit);
+    this.applyPublishedFilter(qb);
+    this.applyOptionalFilters(qb, category, difficulty);
+    this.applyPagination(qb, page, limit);
 
     const [data, total] = await qb.getManyAndCount();
 
@@ -171,5 +159,34 @@ export class CoursesService {
     return this.courseRepository
       .createQueryBuilder('course')
       .leftJoinAndSelect('course.tutor', 'tutor');
+  }
+
+  private applyPublishedFilter(qb: SelectQueryBuilder<Course>): void {
+    // Public endpoint: only show published courses
+    qb.where('course.isPublished = :isPublished', { isPublished: true });
+  }
+
+  private applyOptionalFilters(
+    qb: SelectQueryBuilder<Course>,
+    category?: string,
+    difficulty?: string,
+  ): void {
+    if (category) {
+      qb.andWhere('course.category = :category', { category });
+    }
+
+    if (difficulty) {
+      qb.andWhere('course.difficulty = :difficulty', { difficulty });
+    }
+  }
+
+  private applyPagination(
+    qb: SelectQueryBuilder<Course>,
+    page: number,
+    limit: number,
+  ): void {
+    qb.orderBy('course.createdAt', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
   }
 }
