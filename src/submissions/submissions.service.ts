@@ -85,20 +85,13 @@ export class SubmissionsService {
     role: Role,
   ): Promise<SubmissionDocument[]> {
     const assignment = await this.assignmentsService.findOne(assignmentId);
-    const filter: SubmissionFilter = { assignmentId };
-
-    if (role === Role.TUTOR) {
-      this.courseOwnershipPolicy.assertTutorOwnsCourse(
-        assignment.course.tutorId,
-        userId,
-      );
-    } else {
-      await this.courseEnrollmentPolicy.assertStudentEnrolled(
-        userId,
-        assignment.courseId,
-      );
-      filter.studentId = userId;
-    }
+    const filter = await this.buildFilterForReader(
+      assignmentId,
+      assignment.courseId,
+      assignment.course.tutorId,
+      userId,
+      role,
+    );
 
     return this.submissionModel.find(filter).sort({ createdAt: -1 }).exec();
   }
@@ -146,5 +139,24 @@ export class SubmissionsService {
     }
 
     return submission.save();
+  }
+
+  private async buildFilterForReader(
+    assignmentId: string,
+    courseId: string,
+    courseTutorId: string,
+    userId: string,
+    role: Role,
+  ): Promise<SubmissionFilter> {
+    const filter: SubmissionFilter = { assignmentId };
+
+    if (role === Role.TUTOR) {
+      this.courseOwnershipPolicy.assertTutorOwnsCourse(courseTutorId, userId);
+      return filter;
+    }
+
+    await this.courseEnrollmentPolicy.assertStudentEnrolled(userId, courseId);
+    filter.studentId = userId;
+    return filter;
   }
 }
