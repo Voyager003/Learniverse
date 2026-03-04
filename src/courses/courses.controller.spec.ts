@@ -68,6 +68,7 @@ describe('CoursesController', () => {
     coursesService = {
       create: jest.fn(),
       findAll: jest.fn(),
+      findMyCourses: jest.fn(),
       findById: jest.fn(),
       update: jest.fn(),
       remove: jest.fn(),
@@ -117,6 +118,34 @@ describe('CoursesController', () => {
       expect(result.data[0]).toBeInstanceOf(CourseResponseDto);
       expect(result.total).toBe(1);
       expect(coursesService.findAll).toHaveBeenCalledWith(query);
+    });
+  });
+
+  describe('GET /courses/my', () => {
+    it('튜터의 강좌 목록(공개/비공개 포함)을 페이지네이션으로 반환해야 한다', async () => {
+      const unpublishedCourse = {
+        ...mockCourse,
+        id: 'course-2',
+        isPublished: false,
+      };
+      const paginated = new PaginatedResponseDto(
+        [mockCourse, unpublishedCourse],
+        2,
+        1,
+        10,
+      );
+      coursesService.findMyCourses!.mockResolvedValue(paginated);
+
+      const query = { page: 1, limit: 10 };
+      const result = await controller.findMyCourses(mockReqTutor, query);
+
+      expect(result.data[0]).toBeInstanceOf(CourseResponseDto);
+      expect(result.data[1]).toBeInstanceOf(CourseResponseDto);
+      expect(result.total).toBe(2);
+      expect(coursesService.findMyCourses).toHaveBeenCalledWith(
+        'tutor-uuid',
+        query,
+      );
     });
   });
 

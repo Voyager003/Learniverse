@@ -243,6 +243,100 @@ describe('Courses & Lectures (e2e)', () => {
     });
   });
 
+  // --- GET /courses/my ---
+
+  describe('GET /api/v1/courses/my', () => {
+    let myPublishedCourseId: string;
+    let myDraftCourseId: string;
+    let otherTutorCourseId: string;
+
+    beforeAll(async () => {
+      const draftRes = await request(app.getHttpServer())
+        .post('/api/v1/courses')
+        .set('Authorization', `Bearer ${tutorToken}`)
+        .send({
+          title: 'My Draft Course',
+          description: '비공개 강좌',
+          category: 'programming',
+          difficulty: 'beginner',
+        })
+        .expect(201);
+      myDraftCourseId = (draftRes.body as SuccessBody<CourseData>).data.id;
+
+      const publishedRes = await request(app.getHttpServer())
+        .post('/api/v1/courses')
+        .set('Authorization', `Bearer ${tutorToken}`)
+        .send({
+          title: 'My Published Course',
+          description: '공개 강좌',
+          category: 'data_science',
+          difficulty: 'intermediate',
+        })
+        .expect(201);
+      myPublishedCourseId = (publishedRes.body as SuccessBody<CourseData>).data
+        .id;
+
+      await request(app.getHttpServer())
+        .patch(`/api/v1/courses/${myPublishedCourseId}`)
+        .set('Authorization', `Bearer ${tutorToken}`)
+        .send({ isPublished: true })
+        .expect(200);
+
+      const otherRes = await request(app.getHttpServer())
+        .post('/api/v1/courses')
+        .set('Authorization', `Bearer ${otherTutorToken}`)
+        .send({
+          title: 'Other Tutor Course',
+          description: '다른 튜터 강좌',
+          category: 'design',
+          difficulty: 'advanced',
+        })
+        .expect(201);
+      otherTutorCourseId = (otherRes.body as SuccessBody<CourseData>).data.id;
+    });
+
+    it('TUTOR는 자신의 강좌를 공개/비공개 모두 조회할 수 있다', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/courses/my')
+        .set('Authorization', `Bearer ${tutorToken}`)
+        .expect(200);
+
+      const body = res.body as SuccessBody<PaginatedData<CourseData>>;
+      const ids = body.data.data.map((course) => course.id);
+
+      expect(ids).toContain(myDraftCourseId);
+      expect(ids).toContain(myPublishedCourseId);
+      expect(
+        body.data.data.some((course) => course.isPublished === false),
+      ).toBe(true);
+      expect(body.data.data.some((course) => course.isPublished === true)).toBe(
+        true,
+      );
+    });
+
+    it('다른 튜터의 강좌는 포함되지 않는다', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/courses/my')
+        .set('Authorization', `Bearer ${tutorToken}`)
+        .expect(200);
+
+      const body = res.body as SuccessBody<PaginatedData<CourseData>>;
+      const ids = body.data.data.map((course) => course.id);
+      expect(ids).not.toContain(otherTutorCourseId);
+    });
+
+    it('STUDENT가 접근하면 403을 반환한다', async () => {
+      await request(app.getHttpServer())
+        .get('/api/v1/courses/my')
+        .set('Authorization', `Bearer ${studentToken}`)
+        .expect(403);
+    });
+
+    it('인증 없이 접근하면 401을 반환한다', async () => {
+      await request(app.getHttpServer()).get('/api/v1/courses/my').expect(401);
+    });
+  });
+
   // --- GET /courses/:id ---
 
   describe('GET /api/v1/courses/:id', () => {

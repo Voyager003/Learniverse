@@ -76,6 +76,29 @@ export class CoursesController {
     );
   }
 
+  @Get('my')
+  @UseGuards(RolesGuard)
+  @Roles(Role.TUTOR)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '내 강좌 목록 조회 (TUTOR, 공개/비공개 포함)' })
+  @ApiResponse({ status: 200, description: '내 강좌 목록 (페이지네이션)' })
+  @ApiResponse({ status: 403, description: '권한 부족' })
+  async findMyCourses(
+    @Req() req: { user: RequestUser },
+    @Query() query: CourseQueryDto,
+  ): Promise<PaginatedResponseDto<CourseResponseDto>> {
+    const result = await this.coursesService.findMyCourses(
+      req.user.userId,
+      query,
+    );
+    return new PaginatedResponseDto(
+      CourseResponseDto.fromMany(result.data),
+      result.total,
+      result.page,
+      result.limit,
+    );
+  }
+
   @Get(':id')
   @Public()
   @ApiOperation({ summary: '강좌 상세 조회 (공개)' })

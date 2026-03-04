@@ -213,6 +213,69 @@ describe('CoursesService', () => {
     });
   });
 
+  describe('findMyCourses', () => {
+    let mockQueryBuilder: Partial<Record<string, jest.Mock>>;
+
+    beforeEach(() => {
+      mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getManyAndCount: jest.fn(),
+      };
+      courseRepository.createQueryBuilder!.mockReturnValue(
+        mockQueryBuilder as unknown as SelectQueryBuilder<Course>,
+      );
+    });
+
+    it('튜터의 강좌(공개/비공개)를 페이지네이션으로 반환해야 한다', async () => {
+      const courses = [
+        { id: 'c1', isPublished: true },
+        { id: 'c2', isPublished: false },
+      ] as Course[];
+      mockQueryBuilder.getManyAndCount!.mockResolvedValue([courses, 2]);
+
+      const result = await service.findMyCourses('tutor-uuid', {
+        page: 1,
+        limit: 10,
+      });
+
+      expect(result.data).toEqual(courses);
+      expect(result.total).toBe(2);
+      expect(result.page).toBe(1);
+      expect(result.limit).toBe(10);
+      expect(mockQueryBuilder.where).toHaveBeenCalledWith(
+        'course.tutorId = :tutorId',
+        { tutorId: 'tutor-uuid' },
+      );
+    });
+
+    it('category/difficulty 필터를 함께 적용해야 한다', async () => {
+      mockQueryBuilder.getManyAndCount!.mockResolvedValue([[], 0]);
+
+      await service.findMyCourses('tutor-uuid', {
+        page: 1,
+        limit: 10,
+        category: CourseCategory.PROGRAMMING,
+        difficulty: CourseDifficulty.BEGINNER,
+      });
+
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'course.category = :category',
+        { category: CourseCategory.PROGRAMMING },
+      );
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'course.difficulty = :difficulty',
+        { difficulty: CourseDifficulty.BEGINNER },
+      );
+      expect(mockQueryBuilder.skip).toHaveBeenCalledWith(0);
+      expect(mockQueryBuilder.take).toHaveBeenCalledWith(10);
+    });
+  });
+
   describe('findById', () => {
     it('관계와 함께 공개된 강좌를 반환해야 한다', async () => {
       const course = {

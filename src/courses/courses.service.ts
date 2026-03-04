@@ -48,6 +48,22 @@ export class CoursesService {
     return new PaginatedResponseDto(data, total, page, limit);
   }
 
+  async findMyCourses(
+    tutorId: string,
+    query: CourseQueryDto,
+  ): Promise<PaginatedResponseDto<Course>> {
+    const { page, limit, category, difficulty } = query;
+
+    const qb = this.courseQueryBuilder();
+    qb.where('course.tutorId = :tutorId', { tutorId });
+    this.applyOptionalFilters(qb, category, difficulty);
+    this.applyPagination(qb, page, limit);
+
+    const [data, total] = await qb.getManyAndCount();
+
+    return new PaginatedResponseDto(data, total, page, limit);
+  }
+
   async findById(id: string): Promise<Course> {
     const course = await this.courseRepository.findOne({
       where: { id, isPublished: true },
