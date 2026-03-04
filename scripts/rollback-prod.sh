@@ -21,13 +21,24 @@ if [[ ! -f "$ENV_FILE" ]]; then
   exit 1
 fi
 
+set -a
+# shellcheck disable=SC1090
+source "$ENV_FILE"
+set +a
+
 cd "$ROOT_DIR"
 export IMAGE_TAG="$PREVIOUS_TAG"
 
 docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" pull app
-docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d app
+docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d app nginx
 
 docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" exec -T app \
   node -e "fetch('http://localhost:3000/api/v1/health').then((res)=>{if(!res.ok)process.exit(1)}).catch(()=>process.exit(1))"
+
+if [[ -n "${API_DOMAIN:-}" ]] && [[ -f "$ROOT_DIR/infra/prod/certbot/conf/live/$API_DOMAIN/fullchain.pem" ]]; then
+  curl -kfsS "https://localhost/api/v1/health" >/dev/null
+else
+  curl -fsS "http://localhost/api/v1/health" >/dev/null
+fi
 
 echo "Rollback successful to tag: $PREVIOUS_TAG"

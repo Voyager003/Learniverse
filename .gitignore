@@ -45,6 +45,10 @@ docs/conversations/
 .env.production.local
 .env.local
 infra/prod/.env.prod
+infra/prod/certbot/conf/*
+!infra/prod/certbot/conf/.gitkeep
+infra/prod/certbot/www/*
+!infra/prod/certbot/www/.gitkeep
 
 # temp directory
 .temp
