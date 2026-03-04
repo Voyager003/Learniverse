@@ -32,6 +32,7 @@ interface AssignmentData {
   description: string;
   courseId: string;
   dueDate: string | null;
+  isPublished: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -177,6 +178,7 @@ describe('Assignments & Submissions (e2e)', () => {
       expect(body.data.description).toBe('JwtAuthGuard를 직접 구현해보세요.');
       expect(body.data.courseId).toBe(courseId);
       expect(body.data.dueDate).toBeNull();
+      expect(body.data.isPublished).toBe(false);
       assignmentId = body.data.id;
     });
 
@@ -258,6 +260,47 @@ describe('Assignments & Submissions (e2e)', () => {
     });
   });
 
+  // --- PATCH /courses/:cid/assignments/:aid/publish ---
+
+  describe('PATCH /api/v1/courses/:cid/assignments/:aid/publish', () => {
+    it('소유자 TUTOR가 과제 출시 상태를 변경하면 200을 반환한다', async () => {
+      const res = await request(app.getHttpServer())
+        .patch(
+          `/api/v1/courses/${courseId}/assignments/${assignmentId}/publish`,
+        )
+        .set('Authorization', `Bearer ${tutorToken}`)
+        .send({ isPublished: true })
+        .expect(200);
+
+      const body = res.body as SuccessBody<AssignmentData>;
+      expect(body.data.id).toBe(assignmentId);
+      expect(body.data.isPublished).toBe(true);
+    });
+
+    it('소유자가 아닌 TUTOR가 과제 출시 상태를 변경하면 403을 반환한다', async () => {
+      const res = await request(app.getHttpServer())
+        .patch(
+          `/api/v1/courses/${courseId}/assignments/${assignmentId}/publish`,
+        )
+        .set('Authorization', `Bearer ${otherTutorToken}`)
+        .send({ isPublished: false })
+        .expect(403);
+
+      const body = res.body as ErrorBody;
+      expect(body.message).toBe(ERROR_MESSAGES.NOT_COURSE_OWNER);
+    });
+
+    it('STUDENT가 과제 출시 상태를 변경하면 403을 반환한다', async () => {
+      await request(app.getHttpServer())
+        .patch(
+          `/api/v1/courses/${courseId}/assignments/${assignmentId}/publish`,
+        )
+        .set('Authorization', `Bearer ${studentToken}`)
+        .send({ isPublished: true })
+        .expect(403);
+    });
+  });
+
   // --- GET /courses/:cid/assignments ---
 
   describe('GET /api/v1/courses/:cid/assignments', () => {
@@ -269,7 +312,12 @@ describe('Assignments & Submissions (e2e)', () => {
 
       const body = res.body as SuccessBody<AssignmentData[]>;
       expect(body.data.length).toBeGreaterThanOrEqual(1);
-      expect(body.data[0].courseId).toBe(courseId);
+      expect(body.data.every((assignment) => assignment.isPublished)).toBe(
+        true,
+      );
+      expect(
+        body.data.some((assignment) => assignment.id === assignmentId),
+      ).toBe(true);
     });
 
     it('소유자 TUTOR가 과제 목록을 조회하면 200을 반환한다', async () => {
@@ -316,6 +364,29 @@ describe('Assignments & Submissions (e2e)', () => {
   // --- POST /assignments/:aid/submissions ---
 
   describe('POST /api/v1/assignments/:aid/submissions', () => {
+    it('미출시 과제에 제출하면 400을 반환한다', async () => {
+      const draftAssignmentRes = await request(app.getHttpServer())
+        .post(`/api/v1/courses/${courseId}/assignments`)
+        .set('Authorization', `Bearer ${tutorToken}`)
+        .send({
+          title: 'Draft Assignment',
+          description: '학생이 제출하면 안 되는 과제',
+        })
+        .expect(201);
+      const draftAssignmentId = (
+        draftAssignmentRes.body as SuccessBody<AssignmentData>
+      ).data.id;
+
+      const res = await request(app.getHttpServer())
+        .post(`/api/v1/assignments/${draftAssignmentId}/submissions`)
+        .set('Authorization', `Bearer ${studentToken}`)
+        .send({ content: 'draft submit' })
+        .expect(400);
+
+      const body = res.body as ErrorBody;
+      expect(body.message).toBe(ERROR_MESSAGES.ASSIGNMENT_NOT_PUBLISHED);
+    });
+
     it('수강 중인 STUDENT가 과제를 제출하면 201과 SUBMITTED 상태를 반환한다', async () => {
       const res = await request(app.getHttpServer())
         .post(`/api/v1/assignments/${assignmentId}/submissions`)
@@ -363,6 +434,13 @@ describe('Assignments & Submissions (e2e)', () => {
       const raceAssignmentId = (
         raceAssignmentRes.body as SuccessBody<AssignmentData>
       ).data.id;
+      await request(app.getHttpServer())
+        .patch(
+          `/api/v1/courses/${courseId}/assignments/${raceAssignmentId}/publish`,
+        )
+        .set('Authorization', `Bearer ${tutorToken}`)
+        .send({ isPublished: true })
+        .expect(200);
 
       const [r1, r2] = await Promise.all([
         request(app.getHttpServer())
@@ -557,14 +635,23 @@ describe('Assignments & Submissions (e2e)', () => {
         .send({
           title: 'Ownership Test Assignment',
           description: 'For testing feedback ownership',
-        });
+        })
+        .expect(201);
       const newAssignmentId = (assignRes.body as SuccessBody<AssignmentData>)
         .data.id;
+      await request(app.getHttpServer())
+        .patch(
+          `/api/v1/courses/${courseId}/assignments/${newAssignmentId}/publish`,
+        )
+        .set('Authorization', `Bearer ${tutorToken}`)
+        .send({ isPublished: true })
+        .expect(200);
 
       const subRes = await request(app.getHttpServer())
         .post(`/api/v1/assignments/${newAssignmentId}/submissions`)
         .set('Authorization', `Bearer ${studentToken}`)
-        .send({ content: 'Ownership test submission' });
+        .send({ content: 'Ownership test submission' })
+        .expect(201);
       const newSubmissionId = (subRes.body as SuccessBody<SubmissionData>).data
         .id;
 
