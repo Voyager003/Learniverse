@@ -18,6 +18,7 @@ describe('AssignmentResponseDto', () => {
     courseId: 'course-uuid',
     course: mockCourse,
     dueDate: mockDueDate,
+    isPublished: false,
     createdAt: mockDate,
     updatedAt: mockDate,
   };
@@ -32,6 +33,7 @@ describe('AssignmentResponseDto', () => {
     expect(dto.courseId).toBe('course-uuid');
     expect(dto.courseTitle).toBe('NestJS Fundamentals');
     expect(dto.dueDate).toEqual(mockDueDate);
+    expect(dto.isPublished).toBe(false);
     expect(dto.createdAt).toEqual(mockDate);
   });
 

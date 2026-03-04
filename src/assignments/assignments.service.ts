@@ -43,12 +43,31 @@ export class AssignmentsService {
   ): Promise<Assignment[]> {
     const course = await this.findCourseOrFail(courseId);
     await this.authorizeCourseReader(course, userId, role);
+    const where =
+      role === Role.STUDENT ? { courseId, isPublished: true } : { courseId };
 
     return this.assignmentRepository.find({
-      where: { courseId },
+      where,
       relations: ['course'],
       order: { createdAt: 'DESC' },
     });
+  }
+
+  async updatePublishStatus(
+    courseId: string,
+    assignmentId: string,
+    userId: string,
+    isPublished: boolean,
+  ): Promise<Assignment> {
+    const course = await this.findCourseOrFail(courseId);
+    this.courseOwnershipPolicy.assertTutorOwnsCourse(course.tutorId, userId);
+
+    const assignment = await this.findAssignmentInCourseOrFail(
+      assignmentId,
+      courseId,
+    );
+    assignment.isPublished = isPublished;
+    return this.assignmentRepository.save(assignment);
   }
 
   async findOne(id: string): Promise<Assignment> {
@@ -74,6 +93,22 @@ export class AssignmentsService {
     }
 
     return course;
+  }
+
+  private async findAssignmentInCourseOrFail(
+    assignmentId: string,
+    courseId: string,
+  ): Promise<Assignment> {
+    const assignment = await this.assignmentRepository.findOne({
+      where: { id: assignmentId, courseId },
+      relations: ['course'],
+    });
+
+    if (!assignment) {
+      throw new NotFoundException(ERROR_MESSAGES.ASSIGNMENT_NOT_FOUND);
+    }
+
+    return assignment;
   }
 
   private async authorizeCourseReader(
@@ -105,6 +140,7 @@ export class AssignmentsService {
       description: dto.description,
       courseId,
       dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
+      isPublished: false,
     });
   }
 }

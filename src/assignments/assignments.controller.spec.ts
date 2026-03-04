@@ -19,6 +19,7 @@ const mockAssignment: Assignment = {
   courseId: 'course-uuid',
   course: mockCourse,
   dueDate: new Date('2026-03-01'),
+  isPublished: false,
   createdAt: new Date('2026-01-01'),
   updatedAt: new Date('2026-01-01'),
 };
@@ -47,6 +48,7 @@ describe('AssignmentsController', () => {
     assignmentsService = {
       create: jest.fn(),
       findByCourse: jest.fn(),
+      updatePublishStatus: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -137,6 +139,61 @@ describe('AssignmentsController', () => {
       await expect(
         controller.findByCourse(mockReqStudent, 'course-uuid'),
       ).rejects.toThrow(ForbiddenException);
+    });
+  });
+
+  describe('PATCH /courses/:cid/assignments/:aid/publish', () => {
+    it('과제 공개 상태를 변경하고 AssignmentResponseDto를 반환해야 한다', async () => {
+      assignmentsService.updatePublishStatus!.mockResolvedValue({
+        ...mockAssignment,
+        isPublished: true,
+      });
+
+      const result = await controller.updatePublishStatus(
+        mockReqTutor,
+        'course-uuid',
+        'assignment-uuid',
+        { isPublished: true },
+      );
+
+      expect(result).toBeInstanceOf(AssignmentResponseDto);
+      expect(result.isPublished).toBe(true);
+      expect(assignmentsService.updatePublishStatus).toHaveBeenCalledWith(
+        'course-uuid',
+        'assignment-uuid',
+        'tutor-uuid',
+        true,
+      );
+    });
+
+    it('ForbiddenException을 전파해야 한다', async () => {
+      assignmentsService.updatePublishStatus!.mockRejectedValue(
+        new ForbiddenException(),
+      );
+
+      await expect(
+        controller.updatePublishStatus(
+          mockReqTutor,
+          'course-uuid',
+          'assignment-uuid',
+          { isPublished: true },
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('NotFoundException을 전파해야 한다', async () => {
+      assignmentsService.updatePublishStatus!.mockRejectedValue(
+        new NotFoundException(),
+      );
+
+      await expect(
+        controller.updatePublishStatus(
+          mockReqTutor,
+          'course-uuid',
+          'assignment-uuid',
+          { isPublished: true },
+        ),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 });
