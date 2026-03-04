@@ -8,6 +8,7 @@ describe('Assignment 엔티티', () => {
 
     expect(assignment).toBeDefined();
     expect(assignment.dueDate).toBeUndefined();
+    expect(assignment.isPublished).toBe(false);
   });
 
   it('지정된 값으로 과제를 생성해야 한다', () => {
@@ -16,11 +17,13 @@ describe('Assignment 엔티티', () => {
     assignment.description = 'Guard 구현하기';
     assignment.courseId = 'course-uuid';
     assignment.dueDate = new Date('2026-03-01');
+    assignment.isPublished = true;
 
     expect(assignment.title).toBe('NestJS 과제 1');
     expect(assignment.description).toBe('Guard 구현하기');
     expect(assignment.courseId).toBe('course-uuid');
     expect(assignment.dueDate).toEqual(new Date('2026-03-01'));
+    expect(assignment.isPublished).toBe(true);
   });
 
   it('course 관계를 설정할 수 있어야 한다', () => {

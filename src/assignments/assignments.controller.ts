@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Patch,
   Param,
   ParseUUIDPipe,
   Post,
@@ -17,6 +18,7 @@ import {
 import { AssignmentsService } from './assignments.service.js';
 import { CreateAssignmentDto } from './dto/create-assignment.dto.js';
 import { AssignmentResponseDto } from './dto/assignment-response.dto.js';
+import { PublishAssignmentDto } from './dto/publish-assignment.dto.js';
 import { Roles } from '../common/decorators/roles.decorator.js';
 import { RolesGuard } from '../common/guards/roles.guard.js';
 import { Role } from '../common/enums/index.js';
@@ -71,5 +73,31 @@ export class AssignmentsController {
       req.user.role,
     );
     return AssignmentResponseDto.fromMany(assignments);
+  }
+
+  @Patch(':aid/publish')
+  @UseGuards(RolesGuard)
+  @Roles(Role.TUTOR)
+  @ApiOperation({ summary: '과제 공개 상태 변경 (TUTOR)' })
+  @ApiResponse({
+    status: 200,
+    description: '공개 상태 변경 성공',
+    type: AssignmentResponseDto,
+  })
+  @ApiResponse({ status: 403, description: '권한 부족' })
+  @ApiResponse({ status: 404, description: '강좌 또는 과제 없음' })
+  async updatePublishStatus(
+    @Req() req: { user: RequestUser },
+    @Param('cid', ParseUUIDPipe) courseId: string,
+    @Param('aid', ParseUUIDPipe) assignmentId: string,
+    @Body() dto: PublishAssignmentDto,
+  ): Promise<AssignmentResponseDto> {
+    const assignment = await this.assignmentsService.updatePublishStatus(
+      courseId,
+      assignmentId,
+      req.user.userId,
+      dto.isPublished,
+    );
+    return AssignmentResponseDto.from(assignment);
   }
 }

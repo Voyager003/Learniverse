@@ -25,6 +25,7 @@ export const ERROR_MESSAGES = {
 
   // Assignments
   ASSIGNMENT_NOT_FOUND: 'Assignment not found',
+  ASSIGNMENT_NOT_PUBLISHED: 'Assignment is not published',
   DUE_DATE_IN_PAST: 'Due date must be in the future',
 
   // Submissions

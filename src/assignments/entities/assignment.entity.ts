@@ -32,6 +32,9 @@ export class Assignment {
   @Column({ name: 'due_date', type: 'timestamp', nullable: true })
   dueDate: Date | null;
 
+  @Column({ name: 'is_published', default: false })
+  isPublished: boolean = false;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

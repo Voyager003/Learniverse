@@ -31,6 +31,7 @@ interface MockSubmission {
 const mockAssignment = {
   id: 'assignment-uuid',
   courseId: 'course-uuid',
+  isPublished: true,
   course: { id: 'course-uuid', tutorId: 'tutor-uuid' } as Course,
 } as Assignment;
 
@@ -191,6 +192,21 @@ describe('SubmissionsService', () => {
       await expect(
         service.submit('assignment-uuid', 'student-uuid', dto),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it('공개되지 않은 과제에 제출하면 BadRequestException을 던져야 한다', async () => {
+      const draftAssignment = {
+        ...mockAssignment,
+        isPublished: false,
+      };
+      assignmentsService.findOne!.mockResolvedValue(draftAssignment);
+
+      await expect(
+        service.submit('assignment-uuid', 'student-uuid', dto),
+      ).rejects.toThrow(BadRequestException);
+      expect(
+        courseEnrollmentPolicy.assertStudentEnrolled,
+      ).not.toHaveBeenCalled();
     });
 
     it('마감일이 없는 과제는 제출할 수 있어야 한다', async () => {

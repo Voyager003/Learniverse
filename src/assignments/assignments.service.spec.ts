@@ -101,6 +101,7 @@ describe('AssignmentsService', () => {
         ...dto,
         courseId: 'course-uuid',
         dueDate: undefined,
+        isPublished: false,
       });
       expect(courseOwnershipPolicy.assertTutorOwnsCourse).toHaveBeenCalledWith(
         course.tutorId,
@@ -161,6 +162,7 @@ describe('AssignmentsService', () => {
         description: dto.description,
         courseId: 'course-uuid',
         dueDate: new Date(futureDueDate),
+        isPublished: false,
       });
     });
   });
@@ -213,6 +215,11 @@ describe('AssignmentsService', () => {
         'student-uuid',
         'course-uuid',
       );
+      expect(assignmentRepository.find).toHaveBeenCalledWith({
+        where: { courseId: 'course-uuid', isPublished: true },
+        relations: ['course'],
+        order: { createdAt: 'DESC' },
+      });
     });
 
     it('수강하지 않은 학생이면 ForbiddenException을 던져야 한다', async () => {
@@ -245,6 +252,90 @@ describe('AssignmentsService', () => {
 
       await expect(
         service.findByCourse('nonexistent', 'tutor-uuid', Role.TUTOR),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  // --- updatePublishStatus ---
+
+  describe('updatePublishStatus', () => {
+    it('소유자 튜터가 과제 공개 상태를 변경할 수 있어야 한다', async () => {
+      const course = { id: 'course-uuid', tutorId: 'tutor-uuid' } as Course;
+      const assignment = {
+        id: 'assignment-uuid',
+        courseId: 'course-uuid',
+        isPublished: false,
+      } as Assignment;
+      const saved = { ...assignment, isPublished: true } as Assignment;
+
+      courseRepository.findOne!.mockResolvedValue(course);
+      assignmentRepository.findOne!.mockResolvedValue(assignment);
+      assignmentRepository.save!.mockResolvedValue(saved);
+
+      const result = await service.updatePublishStatus(
+        'course-uuid',
+        'assignment-uuid',
+        'tutor-uuid',
+        true,
+      );
+
+      expect(result).toEqual(saved);
+      expect(courseOwnershipPolicy.assertTutorOwnsCourse).toHaveBeenCalledWith(
+        'tutor-uuid',
+        'tutor-uuid',
+      );
+      expect(assignmentRepository.findOne).toHaveBeenCalledWith({
+        where: { id: 'assignment-uuid', courseId: 'course-uuid' },
+        relations: ['course'],
+      });
+      expect(assignmentRepository.save).toHaveBeenCalledWith({
+        ...assignment,
+        isPublished: true,
+      });
+    });
+
+    it('강좌를 찾을 수 없으면 NotFoundException을 던져야 한다', async () => {
+      courseRepository.findOne!.mockResolvedValue(null);
+
+      await expect(
+        service.updatePublishStatus(
+          'nonexistent',
+          'assignment-uuid',
+          'tutor-uuid',
+          true,
+        ),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('소유자가 아닌 튜터면 ForbiddenException을 던져야 한다', async () => {
+      const course = { id: 'course-uuid', tutorId: 'owner-uuid' } as Course;
+      courseRepository.findOne!.mockResolvedValue(course);
+      courseOwnershipPolicy.assertTutorOwnsCourse!.mockImplementation(() => {
+        throw new ForbiddenException();
+      });
+
+      await expect(
+        service.updatePublishStatus(
+          'course-uuid',
+          'assignment-uuid',
+          'other-uuid',
+          true,
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('과제를 찾을 수 없으면 NotFoundException을 던져야 한다', async () => {
+      const course = { id: 'course-uuid', tutorId: 'tutor-uuid' } as Course;
+      courseRepository.findOne!.mockResolvedValue(course);
+      assignmentRepository.findOne!.mockResolvedValue(null);
+
+      await expect(
+        service.updatePublishStatus(
+          'course-uuid',
+          'assignment-uuid',
+          'tutor-uuid',
+          true,
+        ),
       ).rejects.toThrow(NotFoundException);
     });
   });

@@ -21,6 +21,9 @@ export class AssignmentResponseDto {
   dueDate: Date | null;
 
   @ApiProperty()
+  isPublished: boolean;
+
+  @ApiProperty()
   createdAt: Date;
 
   @ApiProperty()
@@ -34,6 +37,7 @@ export class AssignmentResponseDto {
     dto.courseId = assignment.courseId;
     dto.courseTitle = assignment.course?.title;
     dto.dueDate = assignment.dueDate;
+    dto.isPublished = assignment.isPublished;
     dto.createdAt = assignment.createdAt;
     dto.updatedAt = assignment.updatedAt;
     return dto;

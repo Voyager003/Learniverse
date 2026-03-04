@@ -49,6 +49,7 @@ export class SubmissionsService {
     // Verify assignment exists and get course info
     const assignment = await this.assignmentsService.findOne(assignmentId);
 
+    this.assertAssignmentPublished(assignment.isPublished);
     this.assertSubmissionWithinDeadline(assignment.dueDate);
     await this.assertStudentCanSubmit(studentId, assignment.courseId);
 
@@ -142,6 +143,12 @@ export class SubmissionsService {
     // H-2: Check submission deadline
     if (dueDate && new Date() > dueDate) {
       throw new BadRequestException(ERROR_MESSAGES.SUBMISSION_DEADLINE_PASSED);
+    }
+  }
+
+  private assertAssignmentPublished(isPublished: boolean): void {
+    if (!isPublished) {
+      throw new BadRequestException(ERROR_MESSAGES.ASSIGNMENT_NOT_PUBLISHED);
     }
   }
 
