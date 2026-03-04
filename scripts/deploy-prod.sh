@@ -21,13 +21,18 @@ if [[ ! -f "$ENV_FILE" ]]; then
   exit 1
 fi
 
+set -a
+# shellcheck disable=SC1090
+source "$ENV_FILE"
+set +a
+
 cd "$ROOT_DIR"
 export IMAGE_TAG
 
 docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" pull app
 docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d postgres mongodb
 docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" run --rm app npm run migration:run:prod
-docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d app
+docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d app nginx
 
 MAX_RETRIES=30
 SLEEP_SECONDS=2
@@ -42,6 +47,27 @@ until docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" exec -T app \
   fi
 
   echo "Health check retry $ATTEMPT/$MAX_RETRIES in ${SLEEP_SECONDS}s..."
+  ATTEMPT=$((ATTEMPT + 1))
+  sleep "$SLEEP_SECONDS"
+done
+
+if [[ -n "${API_DOMAIN:-}" ]] && [[ -f "$ROOT_DIR/infra/prod/certbot/conf/live/$API_DOMAIN/fullchain.pem" ]]; then
+  PUBLIC_HEALTH_URL="https://localhost/api/v1/health"
+  CURL_OPTIONS=(-kfsS)
+else
+  PUBLIC_HEALTH_URL="http://localhost/api/v1/health"
+  CURL_OPTIONS=(-fsS)
+fi
+
+ATTEMPT=1
+until curl "${CURL_OPTIONS[@]}" "$PUBLIC_HEALTH_URL" >/dev/null; do
+  if [[ $ATTEMPT -ge $MAX_RETRIES ]]; then
+    echo "Nginx proxy health check failed after $MAX_RETRIES attempts"
+    docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" logs --tail=200 nginx
+    exit 1
+  fi
+
+  echo "Nginx health retry $ATTEMPT/$MAX_RETRIES in ${SLEEP_SECONDS}s..."
   ATTEMPT=$((ATTEMPT + 1))
   sleep "$SLEEP_SECONDS"
 done
