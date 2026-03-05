@@ -101,7 +101,7 @@ describe('AssignmentsService', () => {
         ...dto,
         courseId: 'course-uuid',
         dueDate: undefined,
-        isPublished: false,
+        isPublished: true,
       });
       expect(courseOwnershipPolicy.assertTutorOwnsCourse).toHaveBeenCalledWith(
         course.tutorId,
@@ -162,7 +162,7 @@ describe('AssignmentsService', () => {
         description: dto.description,
         courseId: 'course-uuid',
         dueDate: new Date(futureDueDate),
-        isPublished: false,
+        isPublished: true,
       });
     });
   });

@@ -8,7 +8,7 @@ describe('Assignment 엔티티', () => {
 
     expect(assignment).toBeDefined();
     expect(assignment.dueDate).toBeUndefined();
-    expect(assignment.isPublished).toBe(false);
+    expect(assignment.isPublished).toBe(true);
   });
 
   it('지정된 값으로 과제를 생성해야 한다', () => {
