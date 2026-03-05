@@ -264,7 +264,7 @@ export class SubmissionsService {
           status: { $ne: SubmissionStatus.REVIEWED },
         },
         { $set: update },
-        { new: true },
+        { returnDocument: 'after' },
       )
       .exec();
   }
