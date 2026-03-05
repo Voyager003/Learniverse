@@ -178,7 +178,7 @@ describe('Assignments & Submissions (e2e)', () => {
       expect(body.data.description).toBe('JwtAuthGuard를 직접 구현해보세요.');
       expect(body.data.courseId).toBe(courseId);
       expect(body.data.dueDate).toBeNull();
-      expect(body.data.isPublished).toBe(false);
+      expect(body.data.isPublished).toBe(true);
       assignmentId = body.data.id;
     });
 
@@ -376,6 +376,13 @@ describe('Assignments & Submissions (e2e)', () => {
       const draftAssignmentId = (
         draftAssignmentRes.body as SuccessBody<AssignmentData>
       ).data.id;
+      await request(app.getHttpServer())
+        .patch(
+          `/api/v1/courses/${courseId}/assignments/${draftAssignmentId}/publish`,
+        )
+        .set('Authorization', `Bearer ${tutorToken}`)
+        .send({ isPublished: false })
+        .expect(200);
 
       const res = await request(app.getHttpServer())
         .post(`/api/v1/assignments/${draftAssignmentId}/submissions`)

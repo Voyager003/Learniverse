@@ -140,7 +140,7 @@ export class AssignmentsService {
       description: dto.description,
       courseId,
       dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
-      isPublished: false,
+      isPublished: true,
     });
   }
 }
