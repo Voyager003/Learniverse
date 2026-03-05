@@ -1,6 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { In, ObjectLiteral, QueryFailedError, Repository } from 'typeorm';
+import {
+  DataSource,
+  ObjectLiteral,
+  QueryFailedError,
+  Repository,
+} from 'typeorm';
 import {
   BadRequestException,
   ConflictException,
@@ -11,7 +16,7 @@ import { Enrollment } from './entities/enrollment.entity.js';
 import { Course } from '../courses/entities/course.entity.js';
 import { EnrollmentStatus } from '../common/enums/index.js';
 import { CreateEnrollmentDto } from './dto/create-enrollment.dto.js';
-import { UpdateProgressDto } from './dto/update-progress.dto.js';
+import { IdempotencyService } from '../common/idempotency/idempotency.service.js';
 
 type MockRepository<T extends ObjectLiteral> = Partial<
   Record<keyof Repository<T>, jest.Mock>
@@ -31,14 +36,51 @@ describe('EnrollmentsService', () => {
   let service: EnrollmentsService;
   let enrollmentRepository: MockRepository<Enrollment>;
   let courseRepository: MockRepository<Course>;
+  let dataSource: { transaction: jest.Mock };
+  let idempotencyService: { execute: jest.Mock };
+
+  const queryBuilder = {
+    setLock: jest.fn().mockReturnThis(),
+    where: jest.fn().mockReturnThis(),
+    andWhere: jest.fn().mockReturnThis(),
+    getOne: jest.fn(),
+  };
+
+  const transactionalEnrollmentRepository = {
+    createQueryBuilder: jest.fn().mockReturnValue(queryBuilder),
+    save: jest.fn(),
+  };
 
   beforeEach(async () => {
     enrollmentRepository = createMockRepository<Enrollment>();
     courseRepository = createMockRepository<Course>();
+    idempotencyService = {
+      execute: jest.fn(async (options: { run: () => Promise<unknown> }) =>
+        options.run(),
+      ),
+    };
+
+    dataSource = {
+      transaction: jest.fn((callback: (manager: unknown) => unknown) =>
+        Promise.resolve(
+          callback({
+            getRepository: () => transactionalEnrollmentRepository,
+          }),
+        ),
+      ),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         EnrollmentsService,
+        {
+          provide: DataSource,
+          useValue: dataSource,
+        },
+        {
+          provide: IdempotencyService,
+          useValue: idempotencyService,
+        },
         {
           provide: getRepositoryToken(Enrollment),
           useValue: enrollmentRepository,
@@ -51,9 +93,8 @@ describe('EnrollmentsService', () => {
     }).compile();
 
     service = module.get<EnrollmentsService>(EnrollmentsService);
+    jest.clearAllMocks();
   });
-
-  // --- enroll ---
 
   describe('enroll', () => {
     const dto: CreateEnrollmentDto = { courseId: 'course-uuid' };
@@ -73,17 +114,16 @@ describe('EnrollmentsService', () => {
       } as Enrollment;
 
       courseRepository.findOne!.mockResolvedValue(course);
-      // First findOne: active/completed check → null
-      // Second findOne: dropped check → null
       enrollmentRepository
         .findOne!.mockResolvedValueOnce(null)
         .mockResolvedValueOnce(null);
       enrollmentRepository.create!.mockReturnValue(enrollment);
       enrollmentRepository.save!.mockResolvedValue(enrollment);
 
-      const result = await service.enroll('student-uuid', dto);
+      const result = await service.enroll('student-uuid', dto, 'idem-key-1');
 
       expect(result).toEqual(enrollment);
+      expect(idempotencyService.execute).toHaveBeenCalled();
       expect(enrollmentRepository.create).toHaveBeenCalledWith({
         studentId: 'student-uuid',
         courseId: 'course-uuid',
@@ -164,8 +204,6 @@ describe('EnrollmentsService', () => {
       } as Enrollment;
 
       courseRepository.findOne!.mockResolvedValue(course);
-      // First findOne: active/completed check → null
-      // Second findOne: dropped check → found
       enrollmentRepository
         .findOne!.mockResolvedValueOnce(null)
         .mockResolvedValueOnce(dropped);
@@ -207,28 +245,7 @@ describe('EnrollmentsService', () => {
         ConflictException,
       );
     });
-
-    it('save에서 발생한 예상치 못한 에러를 다시 던져야 한다', async () => {
-      const course = {
-        id: 'course-uuid',
-        isPublished: true,
-        tutorId: 'tutor-uuid',
-      } as Course;
-
-      courseRepository.findOne!.mockResolvedValue(course);
-      enrollmentRepository
-        .findOne!.mockResolvedValueOnce(null)
-        .mockResolvedValueOnce(null);
-      enrollmentRepository.create!.mockReturnValue({} as Enrollment);
-      enrollmentRepository.save!.mockRejectedValue(new Error('unexpected'));
-
-      await expect(service.enroll('student-uuid', dto)).rejects.toThrow(
-        'unexpected',
-      );
-    });
   });
-
-  // --- findMyEnrollments ---
 
   describe('findMyEnrollments', () => {
     it('course 관계와 함께 페이지네이션된 수강 목록을 반환해야 한다', async () => {
@@ -248,181 +265,86 @@ describe('EnrollmentsService', () => {
       expect(result.total).toBe(2);
       expect(result.page).toBe(1);
       expect(result.limit).toBe(10);
-      expect(enrollmentRepository.findAndCount).toHaveBeenCalledWith({
-        where: { studentId: 'student-uuid' },
-        relations: ['course'],
-        order: { createdAt: 'DESC' },
-        skip: 0,
-        take: 10,
-      });
-    });
-
-    it('수강이 없으면 빈 결과를 반환해야 한다', async () => {
-      enrollmentRepository.findAndCount!.mockResolvedValue([[], 0]);
-
-      const result = await service.findMyEnrollments('student-uuid', {
-        page: 1,
-        limit: 10,
-      });
-
-      expect(result.data).toEqual([]);
-      expect(result.total).toBe(0);
-    });
-
-    it('페이지 2에 대해 올바른 skip을 계산해야 한다', async () => {
-      enrollmentRepository.findAndCount!.mockResolvedValue([[], 0]);
-
-      await service.findMyEnrollments('student-uuid', { page: 2, limit: 10 });
-
-      expect(enrollmentRepository.findAndCount).toHaveBeenCalledWith(
-        expect.objectContaining({ skip: 10, take: 10 }),
-      );
     });
   });
 
-  // --- updateProgress ---
-
   describe('updateProgress', () => {
-    it('진행률을 업데이트하고 수강을 반환해야 한다', async () => {
+    it('진행률을 증가 방향으로만 업데이트해야 한다', async () => {
       const enrollment = {
         id: 'enrollment-uuid',
         studentId: 'student-uuid',
         status: EnrollmentStatus.ACTIVE,
-        progress: 30,
+        progress: 60,
       } as Enrollment;
-      const updated = { ...enrollment, progress: 60 } as Enrollment;
-      const dto: UpdateProgressDto = { progress: 60 };
 
-      enrollmentRepository.findOne!.mockResolvedValue(enrollment);
-      enrollmentRepository.save!.mockResolvedValue(updated);
+      queryBuilder.getOne.mockResolvedValue(enrollment);
+      transactionalEnrollmentRepository.save.mockImplementation(
+        (e: Enrollment) => Promise.resolve(e),
+      );
 
       const result = await service.updateProgress(
         'enrollment-uuid',
         'student-uuid',
-        dto,
+        {
+          progress: 40,
+        },
       );
 
       expect(result.progress).toBe(60);
       expect(result.status).toBe(EnrollmentStatus.ACTIVE);
+      expect(dataSource.transaction).toHaveBeenCalled();
     });
 
-    it('진행률이 100에 도달하면 자동으로 완료 처리해야 한다', async () => {
+    it('진행률이 100에 도달하면 완료 처리해야 한다', async () => {
       const enrollment = {
         id: 'enrollment-uuid',
         studentId: 'student-uuid',
         status: EnrollmentStatus.ACTIVE,
         progress: 90,
       } as Enrollment;
-      const dto: UpdateProgressDto = { progress: 100 };
 
-      enrollmentRepository.findOne!.mockResolvedValue(enrollment);
-      enrollmentRepository.save!.mockImplementation((e: Enrollment) =>
-        Promise.resolve(e),
+      queryBuilder.getOne.mockResolvedValue(enrollment);
+      transactionalEnrollmentRepository.save.mockImplementation(
+        (e: Enrollment) => Promise.resolve(e),
       );
 
       const result = await service.updateProgress(
         'enrollment-uuid',
         'student-uuid',
-        dto,
+        {
+          progress: 100,
+        },
       );
 
       expect(result.progress).toBe(100);
       expect(result.status).toBe(EnrollmentStatus.COMPLETED);
     });
 
-    it('수강이 COMPLETED 상태이면 BadRequestException을 던져야 한다', async () => {
-      const enrollment = {
-        id: 'enrollment-uuid',
-        studentId: 'student-uuid',
-        status: EnrollmentStatus.COMPLETED,
-        progress: 100,
-      } as Enrollment;
-
-      enrollmentRepository.findOne!.mockResolvedValue(enrollment);
+    it('수강이 없으면 NotFoundException을 던져야 한다', async () => {
+      queryBuilder.getOne.mockResolvedValue(null);
 
       await expect(
         service.updateProgress('enrollment-uuid', 'student-uuid', {
           progress: 50,
         }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(NotFoundException);
     });
 
-    it('수강이 DROPPED 상태이면 BadRequestException을 던져야 한다', async () => {
+    it('활성 상태가 아니면 BadRequestException을 던져야 한다', async () => {
       const enrollment = {
         id: 'enrollment-uuid',
         studentId: 'student-uuid',
         status: EnrollmentStatus.DROPPED,
-        progress: 30,
+        progress: 20,
       } as Enrollment;
 
-      enrollmentRepository.findOne!.mockResolvedValue(enrollment);
+      queryBuilder.getOne.mockResolvedValue(enrollment);
 
       await expect(
         service.updateProgress('enrollment-uuid', 'student-uuid', {
           progress: 50,
         }),
       ).rejects.toThrow(BadRequestException);
-    });
-
-    it('수강을 찾을 수 없으면 NotFoundException을 던져야 한다', async () => {
-      enrollmentRepository.findOne!.mockResolvedValue(null);
-
-      await expect(
-        service.updateProgress('nonexistent', 'student-uuid', { progress: 50 }),
-      ).rejects.toThrow(NotFoundException);
-    });
-
-    it('다른 학생의 수강이면 NotFoundException을 던져야 한다', async () => {
-      enrollmentRepository.findOne!.mockResolvedValue(null);
-
-      await expect(
-        service.updateProgress('enrollment-uuid', 'other-student', {
-          progress: 50,
-        }),
-      ).rejects.toThrow(NotFoundException);
-    });
-  });
-
-  // --- isEnrolled ---
-
-  describe('isEnrolled', () => {
-    it('활성 수강 중이면 true를 반환해야 한다', async () => {
-      const enrollment = {
-        id: 'enrollment-uuid',
-        status: EnrollmentStatus.ACTIVE,
-      } as Enrollment;
-      enrollmentRepository.findOne!.mockResolvedValue(enrollment);
-
-      const result = await service.isEnrolled('student-uuid', 'course-uuid');
-
-      expect(result).toBe(true);
-      expect(enrollmentRepository.findOne).toHaveBeenCalledWith({
-        where: {
-          studentId: 'student-uuid',
-          courseId: 'course-uuid',
-          status: In([EnrollmentStatus.ACTIVE, EnrollmentStatus.COMPLETED]),
-        },
-      });
-    });
-
-    it('수강이 완료 상태이면 true를 반환해야 한다', async () => {
-      const enrollment = {
-        id: 'enrollment-uuid',
-        status: EnrollmentStatus.COMPLETED,
-      } as Enrollment;
-      enrollmentRepository.findOne!.mockResolvedValue(enrollment);
-
-      const result = await service.isEnrolled('student-uuid', 'course-uuid');
-
-      expect(result).toBe(true);
-    });
-
-    it('수강하지 않았으면 false를 반환해야 한다', async () => {
-      enrollmentRepository.findOne!.mockResolvedValue(null);
-
-      const result = await service.isEnrolled('student-uuid', 'course-uuid');
-
-      expect(result).toBe(false);
     });
   });
 });

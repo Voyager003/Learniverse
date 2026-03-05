@@ -74,6 +74,7 @@ describe('EnrollmentsController', () => {
       expect(enrollmentsService.enroll).toHaveBeenCalledWith(
         'student-uuid',
         dto,
+        undefined,
       );
     });
 

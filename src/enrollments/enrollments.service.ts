@@ -5,7 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, QueryFailedError, Repository } from 'typeorm';
+import { DataSource, In, QueryFailedError, Repository } from 'typeorm';
 import { Enrollment } from './entities/enrollment.entity.js';
 import { Course } from '../courses/entities/course.entity.js';
 import { CreateEnrollmentDto } from './dto/create-enrollment.dto.js';
@@ -14,12 +14,16 @@ import { PaginationQueryDto } from '../common/dto/pagination-query.dto.js';
 import { PaginatedResponseDto } from '../common/dto/paginated-response.dto.js';
 import { EnrollmentStatus } from '../common/enums/index.js';
 import { ERROR_MESSAGES } from '../common/constants/error-messages.constant.js';
+import { IdempotencyService } from '../common/idempotency/idempotency.service.js';
+import { IdempotencyKey } from '../common/idempotency/entities/idempotency-key.entity.js';
 
 const UNIQUE_VIOLATION_CODE = '23505';
 
 @Injectable()
 export class EnrollmentsService {
   constructor(
+    private readonly dataSource: DataSource,
+    private readonly idempotencyService: IdempotencyService,
     @InjectRepository(Enrollment)
     private readonly enrollmentRepository: Repository<Enrollment>,
     @InjectRepository(Course)
@@ -27,6 +31,24 @@ export class EnrollmentsService {
   ) {}
 
   async enroll(
+    studentId: string,
+    dto: CreateEnrollmentDto,
+    idempotencyKey?: string,
+  ): Promise<Enrollment> {
+    return this.idempotencyService.execute({
+      userId: studentId,
+      method: 'POST',
+      path: '/api/v1/enrollments',
+      key: idempotencyKey,
+      payload: dto,
+      run: () => this.enrollOnce(studentId, dto),
+      replay: (record) => this.replayEnrollment(record),
+      serializeResult: (enrollment) => ({ enrollmentId: enrollment.id }),
+      successStatus: 201,
+    });
+  }
+
+  private async enrollOnce(
     studentId: string,
     dto: CreateEnrollmentDto,
   ): Promise<Enrollment> {
@@ -68,10 +90,34 @@ export class EnrollmentsService {
     studentId: string,
     dto: UpdateProgressDto,
   ): Promise<Enrollment> {
-    const enrollment = await this.findEnrollmentForStudentOrFail(id, studentId);
-    this.assertEnrollmentActive(enrollment);
-    this.applyProgress(enrollment, dto.progress);
-    return this.enrollmentRepository.save(enrollment);
+    return this.dataSource.transaction(async (manager) => {
+      const transactionalEnrollmentRepository =
+        manager.getRepository(Enrollment);
+      const enrollment = await transactionalEnrollmentRepository
+        .createQueryBuilder('enrollment')
+        .setLock('pessimistic_write')
+        .where('enrollment.id = :id', { id })
+        .andWhere('enrollment.studentId = :studentId', { studentId })
+        .getOne();
+
+      if (!enrollment) {
+        throw new NotFoundException(ERROR_MESSAGES.ENROLLMENT_NOT_FOUND);
+      }
+
+      if (enrollment.status !== EnrollmentStatus.ACTIVE) {
+        throw new BadRequestException(ERROR_MESSAGES.ENROLLMENT_NOT_ACTIVE);
+      }
+
+      // Prevent out-of-order updates from reducing progress.
+      const nextProgress = Math.max(enrollment.progress, dto.progress);
+      enrollment.progress = nextProgress;
+
+      if (nextProgress === 100) {
+        enrollment.status = EnrollmentStatus.COMPLETED;
+      }
+
+      return transactionalEnrollmentRepository.save(enrollment);
+    });
   }
 
   async isEnrolled(studentId: string, courseId: string): Promise<boolean> {
@@ -169,12 +215,14 @@ export class EnrollmentsService {
     }
   }
 
-  private async findEnrollmentForStudentOrFail(
-    id: string,
-    studentId: string,
-  ): Promise<Enrollment> {
+  private async replayEnrollment(record: IdempotencyKey): Promise<Enrollment> {
+    const enrollmentId = this.readEnrollmentId(record.responseBody);
+    if (!enrollmentId) {
+      throw new NotFoundException(ERROR_MESSAGES.ENROLLMENT_NOT_FOUND);
+    }
+
     const enrollment = await this.enrollmentRepository.findOne({
-      where: { id, studentId },
+      where: { id: enrollmentId },
     });
 
     if (!enrollment) {
@@ -184,19 +232,14 @@ export class EnrollmentsService {
     return enrollment;
   }
 
-  private assertEnrollmentActive(enrollment: Enrollment): void {
-    // C-2: Only ACTIVE enrollments can have progress updated
-    if (enrollment.status !== EnrollmentStatus.ACTIVE) {
-      throw new BadRequestException(ERROR_MESSAGES.ENROLLMENT_NOT_ACTIVE);
+  private readEnrollmentId(responseBody: unknown): string | null {
+    if (!responseBody || typeof responseBody !== 'object') {
+      return null;
     }
-  }
 
-  private applyProgress(enrollment: Enrollment, progress: number): void {
-    enrollment.progress = progress;
-
-    // Auto-complete when progress reaches 100
-    if (progress === 100) {
-      enrollment.status = EnrollmentStatus.COMPLETED;
-    }
+    const enrollmentId = (responseBody as Record<string, unknown>)[
+      'enrollmentId'
+    ];
+    return typeof enrollmentId === 'string' ? enrollmentId : null;
   }
 }

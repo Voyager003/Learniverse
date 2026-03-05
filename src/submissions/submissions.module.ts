@@ -5,6 +5,7 @@ import { SubmissionsService } from './submissions.service.js';
 import { SubmissionsController } from './submissions.controller.js';
 import { AssignmentsModule } from '../assignments/assignments.module.js';
 import { CommonPoliciesModule } from '../common/policies/common-policies.module.js';
+import { IdempotencyModule } from '../common/idempotency/idempotency.module.js';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { CommonPoliciesModule } from '../common/policies/common-policies.module.
     ]),
     AssignmentsModule,
     CommonPoliciesModule,
+    IdempotencyModule,
   ],
   controllers: [SubmissionsController],
   providers: [SubmissionsService],

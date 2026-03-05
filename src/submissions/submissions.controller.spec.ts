@@ -80,6 +80,7 @@ describe('SubmissionsController', () => {
         'assignment-uuid',
         'student-uuid',
         dto,
+        undefined,
       );
     });
 

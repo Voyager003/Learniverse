@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -15,6 +16,7 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
+  ApiHeader,
 } from '@nestjs/swagger';
 import { EnrollmentsService } from './enrollments.service.js';
 import { CreateEnrollmentDto } from './dto/create-enrollment.dto.js';
@@ -43,13 +45,20 @@ export class EnrollmentsController {
     type: EnrollmentResponseDto,
   })
   @ApiResponse({ status: 409, description: '이미 수강 중' })
+  @ApiHeader({
+    name: 'Idempotency-Key',
+    required: false,
+    description: '재시도 중복 처리를 위한 멱등성 키',
+  })
   async enroll(
     @Req() req: { user: RequestUser },
     @Body() dto: CreateEnrollmentDto,
+    @Headers('idempotency-key') idempotencyKey?: string,
   ): Promise<EnrollmentResponseDto> {
     const enrollment = await this.enrollmentsService.enroll(
       req.user.userId,
       dto,
+      idempotencyKey,
     );
     return EnrollmentResponseDto.from(enrollment);
   }

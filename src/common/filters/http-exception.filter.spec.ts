@@ -5,6 +5,7 @@ import {
   ArgumentsHost,
   Logger,
 } from '@nestjs/common';
+import { ERROR_MESSAGES } from '../constants/error-messages.constant.js';
 interface MockResponse {
   status: jest.Mock & { (): MockResponse };
   json: jest.Mock & { (): MockResponse };
@@ -76,6 +77,54 @@ describe('HttpExceptionFilter', () => {
       expect.objectContaining({
         statusCode: 500,
         message: 'Internal server error',
+      }),
+    );
+  });
+
+  it('Postgres unique 위반을 409로 매핑해야 한다', () => {
+    const exception = {
+      driverError: { code: '23505' },
+    };
+
+    filter.catch(exception, mockHost);
+
+    expect(mockResponse.status).toHaveBeenCalledWith(409);
+    expect(mockResponse.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        statusCode: 409,
+        message: ERROR_MESSAGES.DUPLICATE_RESOURCE,
+      }),
+    );
+  });
+
+  it('Mongo duplicate key 에러를 409로 매핑해야 한다', () => {
+    const exception = {
+      code: 11000,
+    };
+
+    filter.catch(exception, mockHost);
+
+    expect(mockResponse.status).toHaveBeenCalledWith(409);
+    expect(mockResponse.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        statusCode: 409,
+        message: ERROR_MESSAGES.DUPLICATE_RESOURCE,
+      }),
+    );
+  });
+
+  it('Mongo validation 에러를 400으로 매핑해야 한다', () => {
+    const exception = {
+      name: 'ValidationError',
+    };
+
+    filter.catch(exception, mockHost);
+
+    expect(mockResponse.status).toHaveBeenCalledWith(400);
+    expect(mockResponse.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        statusCode: 400,
+        message: ERROR_MESSAGES.INVALID_INPUT_FORMAT,
       }),
     );
   });

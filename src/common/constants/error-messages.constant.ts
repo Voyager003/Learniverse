@@ -38,6 +38,16 @@ export const ERROR_MESSAGES = {
   SUBMISSION_ASSIGNMENT_MISMATCH:
     'Submission does not belong to this assignment',
 
+  // Idempotency
+  IDEMPOTENCY_KEY_PAYLOAD_MISMATCH:
+    'Idempotency key was reused with a different request payload',
+  IDEMPOTENCY_REQUEST_IN_PROGRESS:
+    'A request with this idempotency key is still being processed',
+  IDEMPOTENCY_KEY_TOO_LONG: 'Idempotency key must be 255 characters or fewer',
+
   // Common
+  DUPLICATE_RESOURCE: 'Duplicate resource',
+  INVALID_REFERENCE: 'Invalid reference data',
+  INVALID_INPUT_FORMAT: 'Invalid input format',
   INVALID_MONGO_ID: 'Invalid ID format',
 } as const;
