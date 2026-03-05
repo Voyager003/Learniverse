@@ -429,6 +429,98 @@ describe('Assignments & Submissions (e2e)', () => {
       expect(body.message).toBe(ERROR_MESSAGES.ALREADY_SUBMITTED);
     });
 
+    it('동일 Idempotency-Key로 재시도하면 같은 제출 결과를 반환한다', async () => {
+      const idemAssignmentRes = await request(app.getHttpServer())
+        .post(`/api/v1/courses/${courseId}/assignments`)
+        .set('Authorization', `Bearer ${tutorToken}`)
+        .send({
+          title: 'Submission Idempotency Assignment',
+          description: 'idempotency replay test',
+        })
+        .expect(201);
+      const idemAssignmentId = (
+        idemAssignmentRes.body as SuccessBody<AssignmentData>
+      ).data.id;
+
+      await request(app.getHttpServer())
+        .patch(
+          `/api/v1/courses/${courseId}/assignments/${idemAssignmentId}/publish`,
+        )
+        .set('Authorization', `Bearer ${tutorToken}`)
+        .send({ isPublished: true })
+        .expect(200);
+
+      const key = `submission-idempotency-${Date.now()}`;
+
+      const first = await request(app.getHttpServer())
+        .post(`/api/v1/assignments/${idemAssignmentId}/submissions`)
+        .set('Authorization', `Bearer ${studentToken}`)
+        .set('Idempotency-Key', key)
+        .send({ content: 'idempotent answer' })
+        .expect(201);
+      const firstBody = first.body as SuccessBody<SubmissionData>;
+
+      const second = await request(app.getHttpServer())
+        .post(`/api/v1/assignments/${idemAssignmentId}/submissions`)
+        .set('Authorization', `Bearer ${studentToken}`)
+        .set('Idempotency-Key', key)
+        .send({ content: 'idempotent answer' })
+        .expect(201);
+      const secondBody = second.body as SuccessBody<SubmissionData>;
+
+      expect(secondBody.data.id).toBe(firstBody.data.id);
+      await assertSubmissionCount(
+        mongoConnection,
+        idemAssignmentId,
+        studentId,
+        1,
+      );
+    });
+
+    it('동일 Idempotency-Key를 다른 payload로 재사용하면 409를 반환한다', async () => {
+      const idemMismatchAssignmentRes = await request(app.getHttpServer())
+        .post(`/api/v1/courses/${courseId}/assignments`)
+        .set('Authorization', `Bearer ${tutorToken}`)
+        .send({
+          title: 'Submission Idempotency Mismatch Assignment',
+          description: 'idempotency mismatch test',
+        })
+        .expect(201);
+      const idemMismatchAssignmentId = (
+        idemMismatchAssignmentRes.body as SuccessBody<AssignmentData>
+      ).data.id;
+
+      await request(app.getHttpServer())
+        .patch(
+          `/api/v1/courses/${courseId}/assignments/${idemMismatchAssignmentId}/publish`,
+        )
+        .set('Authorization', `Bearer ${tutorToken}`)
+        .send({ isPublished: true })
+        .expect(200);
+
+      const key = `submission-idempotency-mismatch-${Date.now()}`;
+
+      await request(app.getHttpServer())
+        .post(`/api/v1/assignments/${idemMismatchAssignmentId}/submissions`)
+        .set('Authorization', `Bearer ${studentToken}`)
+        .set('Idempotency-Key', key)
+        .send({ content: 'first payload' })
+        .expect(201);
+
+      const mismatch = await request(app.getHttpServer())
+        .post(`/api/v1/assignments/${idemMismatchAssignmentId}/submissions`)
+        .set('Authorization', `Bearer ${studentToken}`)
+        .set('Idempotency-Key', key)
+        .send({ content: 'second payload' })
+        .expect(409);
+
+      expectErrorEnvelope(
+        mismatch,
+        409,
+        ERROR_MESSAGES.IDEMPOTENCY_KEY_PAYLOAD_MISMATCH,
+      );
+    });
+
     it('동일 제출 요청을 동시에 보내면 1건만 성공한다', async () => {
       const raceAssignmentRes = await request(app.getHttpServer())
         .post(`/api/v1/courses/${courseId}/assignments`)
@@ -631,6 +723,53 @@ describe('Assignments & Submissions (e2e)', () => {
         ERROR_MESSAGES.SUBMISSION_ALREADY_REVIEWED,
       );
       expect(body.message).toBe(ERROR_MESSAGES.SUBMISSION_ALREADY_REVIEWED);
+    });
+
+    it('동일 제출에 피드백을 동시에 요청하면 1건만 성공한다', async () => {
+      const assignRes = await request(app.getHttpServer())
+        .post(`/api/v1/courses/${courseId}/assignments`)
+        .set('Authorization', `Bearer ${tutorToken}`)
+        .send({
+          title: 'Feedback Race Assignment',
+          description: 'for concurrent feedback test',
+        })
+        .expect(201);
+      const raceAssignmentId = (assignRes.body as SuccessBody<AssignmentData>)
+        .data.id;
+
+      await request(app.getHttpServer())
+        .patch(
+          `/api/v1/courses/${courseId}/assignments/${raceAssignmentId}/publish`,
+        )
+        .set('Authorization', `Bearer ${tutorToken}`)
+        .send({ isPublished: true })
+        .expect(200);
+
+      const subRes = await request(app.getHttpServer())
+        .post(`/api/v1/assignments/${raceAssignmentId}/submissions`)
+        .set('Authorization', `Bearer ${studentToken}`)
+        .send({ content: 'feedback race answer' })
+        .expect(201);
+      const raceSubmissionId = (subRes.body as SuccessBody<SubmissionData>).data
+        .id;
+
+      const [r1, r2] = await Promise.all([
+        request(app.getHttpServer())
+          .post(
+            `/api/v1/assignments/${raceAssignmentId}/submissions/${raceSubmissionId}/feedback`,
+          )
+          .set('Authorization', `Bearer ${tutorToken}`)
+          .send({ feedback: 'first', score: 90 }),
+        request(app.getHttpServer())
+          .post(
+            `/api/v1/assignments/${raceAssignmentId}/submissions/${raceSubmissionId}/feedback`,
+          )
+          .set('Authorization', `Bearer ${tutorToken}`)
+          .send({ feedback: 'second', score: 80 }),
+      ]);
+
+      const statuses = [r1.status, r2.status].sort((a, b) => a - b);
+      expect(statuses).toEqual([201, 409]);
     });
 
     it('다른 TUTOR가 피드백하면 403을 반환한다', async () => {

@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   Param,
   ParseUUIDPipe,
   Post,
@@ -13,6 +14,7 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
+  ApiHeader,
 } from '@nestjs/swagger';
 import { SubmissionsService } from './submissions.service.js';
 import { CreateSubmissionDto } from './dto/create-submission.dto.js';
@@ -41,15 +43,22 @@ export class SubmissionsController {
   })
   @ApiResponse({ status: 403, description: '미수강 또는 권한 부족' })
   @ApiResponse({ status: 409, description: '이미 제출됨' })
+  @ApiHeader({
+    name: 'Idempotency-Key',
+    required: false,
+    description: '재시도 중복 처리를 위한 멱등성 키',
+  })
   async submit(
     @Req() req: { user: RequestUser },
     @Param('aid', ParseUUIDPipe) assignmentId: string,
     @Body() dto: CreateSubmissionDto,
+    @Headers('idempotency-key') idempotencyKey?: string,
   ): Promise<SubmissionResponseDto> {
     const submission = await this.submissionsService.submit(
       assignmentId,
       req.user.userId,
       dto,
+      idempotencyKey,
     );
     return SubmissionResponseDto.from(submission);
   }

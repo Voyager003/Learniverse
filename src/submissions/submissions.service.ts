@@ -15,6 +15,8 @@ import { SubmissionStatus, Role } from '../common/enums/index.js';
 import { ERROR_MESSAGES } from '../common/constants/error-messages.constant.js';
 import { CourseEnrollmentPolicy } from '../common/policies/course-enrollment.policy.js';
 import { CourseOwnershipPolicy } from '../common/policies/course-ownership.policy.js';
+import { IdempotencyService } from '../common/idempotency/idempotency.service.js';
+import { IdempotencyKey } from '../common/idempotency/entities/idempotency-key.entity.js';
 
 interface MongoError extends Error {
   code?: number;
@@ -39,9 +41,29 @@ export class SubmissionsService {
     private readonly assignmentsService: AssignmentsService,
     private readonly courseEnrollmentPolicy: CourseEnrollmentPolicy,
     private readonly courseOwnershipPolicy: CourseOwnershipPolicy,
+    private readonly idempotencyService: IdempotencyService,
   ) {}
 
   async submit(
+    assignmentId: string,
+    studentId: string,
+    dto: CreateSubmissionDto,
+    idempotencyKey?: string,
+  ): Promise<SubmissionDocument> {
+    return this.idempotencyService.execute({
+      userId: studentId,
+      method: 'POST',
+      path: `/api/v1/assignments/${assignmentId}/submissions`,
+      key: idempotencyKey,
+      payload: dto,
+      run: () => this.submitOnce(assignmentId, studentId, dto),
+      replay: (record) => this.replaySubmission(record),
+      serializeResult: (submission) => ({ submissionId: submission.id }),
+      successStatus: 201,
+    });
+  }
+
+  private async submitOnce(
     assignmentId: string,
     studentId: string,
     dto: CreateSubmissionDto,
@@ -77,7 +99,6 @@ export class SubmissionsService {
   ): Promise<SubmissionDocument> {
     const submission = await this.findSubmissionOrFail(submissionId);
     this.assertSubmissionBelongsToAssignment(submission, assignmentId);
-    this.assertFeedbackAllowed(submission);
 
     // Verify ownership via assignment → course
     const assignment = await this.assignmentsService.findOne(
@@ -88,9 +109,17 @@ export class SubmissionsService {
       userId,
     );
 
-    this.applyFeedback(submission, dto);
+    const updated = await this.updateFeedbackAtomically(
+      submissionId,
+      assignmentId,
+      dto,
+    );
 
-    return submission.save();
+    if (!updated) {
+      throw new ConflictException(ERROR_MESSAGES.SUBMISSION_ALREADY_REVIEWED);
+    }
+
+    return updated;
   }
 
   private async buildFilterForReader(
@@ -209,26 +238,61 @@ export class SubmissionsService {
     }
   }
 
-  private assertFeedbackAllowed(submission: SubmissionDocument): void {
-    // H-3: Guard against re-feedback on already REVIEWED submissions
-    if (submission.status === SubmissionStatus.REVIEWED) {
-      throw new ConflictException(ERROR_MESSAGES.SUBMISSION_ALREADY_REVIEWED);
-    }
-  }
-
-  private applyFeedback(
-    submission: SubmissionDocument,
+  private async updateFeedbackAtomically(
+    submissionId: string,
+    assignmentId: string,
     dto: AddFeedbackDto,
-  ): void {
-    submission.feedback = dto.feedback;
-    submission.reviewedAt = new Date();
+  ): Promise<SubmissionDocument | null> {
+    const update: Record<string, unknown> = {
+      feedback: dto.feedback,
+      reviewedAt: new Date(),
+    };
 
     if (dto.score !== undefined) {
-      submission.score = dto.score;
-      submission.status = SubmissionStatus.REVIEWED;
-      return;
+      update.score = dto.score;
+      update.status = SubmissionStatus.REVIEWED;
+    } else {
+      update.score = null;
+      update.status = SubmissionStatus.RETURNED;
     }
 
-    submission.status = SubmissionStatus.RETURNED;
+    return this.submissionModel
+      .findOneAndUpdate(
+        {
+          _id: submissionId,
+          assignmentId,
+          status: { $ne: SubmissionStatus.REVIEWED },
+        },
+        { $set: update },
+        { returnDocument: 'after' },
+      )
+      .exec();
+  }
+
+  private async replaySubmission(
+    record: IdempotencyKey,
+  ): Promise<SubmissionDocument> {
+    const submissionId = this.readSubmissionId(record.responseBody);
+    if (!submissionId) {
+      throw new NotFoundException(ERROR_MESSAGES.SUBMISSION_NOT_FOUND);
+    }
+
+    const submission = await this.submissionModel.findById(submissionId).exec();
+    if (!submission) {
+      throw new NotFoundException(ERROR_MESSAGES.SUBMISSION_NOT_FOUND);
+    }
+
+    return submission;
+  }
+
+  private readSubmissionId(responseBody: unknown): string | null {
+    if (!responseBody || typeof responseBody !== 'object') {
+      return null;
+    }
+
+    const submissionId = (responseBody as Record<string, unknown>)[
+      'submissionId'
+    ];
+    return typeof submissionId === 'string' ? submissionId : null;
   }
 }
