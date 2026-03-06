@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/mongoose';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import {
   NotFoundException,
   ForbiddenException,
@@ -11,12 +12,13 @@ import { Submission } from './schemas/submission.schema.js';
 import { AssignmentsService } from '../assignments/assignments.service.js';
 import { Assignment } from '../assignments/entities/assignment.entity.js';
 import { Course } from '../courses/entities/course.entity.js';
-import { SubmissionStatus } from '../common/enums/index.js';
+import { SubmissionStatus, Role } from '../common/enums/index.js';
 import { CreateSubmissionDto } from './dto/create-submission.dto.js';
 import { AddFeedbackDto } from './dto/add-feedback.dto.js';
 import { CourseEnrollmentPolicy } from '../common/policies/course-enrollment.policy.js';
 import { CourseOwnershipPolicy } from '../common/policies/course-ownership.policy.js';
 import { IdempotencyService } from '../common/idempotency/idempotency.service.js';
+import { User } from '../users/entities/user.entity.js';
 
 const mockAssignment = {
   id: 'assignment-uuid',
@@ -29,6 +31,7 @@ const mockAssignment = {
 describe('SubmissionsService', () => {
   let service: SubmissionsService;
   let submissionModel: Record<string, jest.Mock>;
+  let userRepository: Record<string, jest.Mock>;
   let assignmentsService: Partial<Record<keyof AssignmentsService, jest.Mock>>;
   let courseEnrollmentPolicy: Partial<
     Record<keyof CourseEnrollmentPolicy, jest.Mock>
@@ -45,6 +48,9 @@ describe('SubmissionsService', () => {
       findById: jest.fn(),
       findOne: jest.fn(),
       findOneAndUpdate: jest.fn(),
+    };
+    userRepository = {
+      find: jest.fn(),
     };
 
     assignmentsService = {
@@ -69,6 +75,10 @@ describe('SubmissionsService', () => {
         {
           provide: getModelToken(Submission.name),
           useValue: submissionModel,
+        },
+        {
+          provide: getRepositoryToken(User),
+          useValue: userRepository,
         },
         {
           provide: AssignmentsService,
@@ -154,6 +164,50 @@ describe('SubmissionsService', () => {
       await expect(
         service.submit('assignment-uuid', 'student-uuid', dto),
       ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('findByAssignment', () => {
+    it('튜터 조회 시 studentName을 포함한 제출 목록을 반환해야 한다', async () => {
+      const submissionDoc = {
+        _id: { toString: () => 'submission-id' },
+        id: 'submission-id',
+        studentId: 'student-uuid',
+        assignmentId: 'assignment-uuid',
+        content: '과제 답안입니다.',
+        fileUrls: [],
+        status: SubmissionStatus.SUBMITTED,
+        feedback: null,
+        score: null,
+        reviewedAt: null,
+        createdAt: new Date('2026-01-01'),
+        updatedAt: new Date('2026-01-01'),
+      };
+
+      assignmentsService.findOne!.mockResolvedValue(mockAssignment);
+      courseOwnershipPolicy.assertTutorOwnsCourse!.mockImplementation(() => {
+        // no-op
+      });
+      submissionModel.find.mockReturnValue({
+        sort: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue([submissionDoc]),
+      });
+      userRepository.find.mockResolvedValue([
+        { id: 'student-uuid', name: '홍길동' },
+      ]);
+
+      const result = await service.findByAssignment(
+        'assignment-uuid',
+        'tutor-uuid',
+        Role.TUTOR,
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toMatchObject({
+        studentId: 'student-uuid',
+        studentName: '홍길동',
+      });
+      expect(userRepository.find).toHaveBeenCalledTimes(1);
     });
   });
 

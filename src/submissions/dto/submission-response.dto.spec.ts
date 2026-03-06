@@ -27,6 +27,7 @@ describe('SubmissionResponseDto', () => {
     expect(dto).toBeInstanceOf(SubmissionResponseDto);
     expect(dto.id).toBe('submission-id');
     expect(dto.studentId).toBe('student-uuid');
+    expect(dto.studentName).toBeUndefined();
     expect(dto.assignmentId).toBe('assignment-uuid');
     expect(dto.content).toBe('과제 답안입니다.');
     expect(dto.fileUrls).toEqual(['https://example.com/file.pdf']);
@@ -51,6 +52,16 @@ describe('SubmissionResponseDto', () => {
     expect(dto.feedback).toBe('잘 작성하셨습니다.');
     expect(dto.score).toBe(95);
     expect(dto.reviewedAt).toEqual(new Date('2026-02-01'));
+  });
+
+  it('studentName이 포함된 문서를 변환해야 한다', () => {
+    const submissionWithStudentName = {
+      ...mockSubmission,
+      studentName: '홍길동',
+    } as unknown as SubmissionDocument & { studentName: string };
+    const dto = SubmissionResponseDto.from(submissionWithStudentName);
+
+    expect(dto.studentName).toBe('홍길동');
   });
 
   it('배열을 변환해야 한다', () => {

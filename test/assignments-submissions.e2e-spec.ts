@@ -40,6 +40,7 @@ interface AssignmentData {
 interface SubmissionData {
   id: string;
   studentId: string;
+  studentName?: string;
   assignmentId: string;
   content: string;
   fileUrls: string[];
@@ -632,6 +633,7 @@ describe('Assignments & Submissions (e2e)', () => {
 
       const body = res.body as SuccessBody<SubmissionData[]>;
       expect(body.data.length).toBeGreaterThanOrEqual(1);
+      expect(body.data[0].studentName).toBe('Assign Student');
     });
 
     it('미수강 STUDENT가 조회하면 403을 반환한다', async () => {

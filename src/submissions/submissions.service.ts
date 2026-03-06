@@ -5,7 +5,9 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import { InjectRepository } from '@nestjs/typeorm';
 import { Model } from 'mongoose';
+import { In, Repository } from 'typeorm';
 import { Submission, SubmissionDocument } from './schemas/submission.schema.js';
 import { AssignmentsService } from '../assignments/assignments.service.js';
 import { Assignment } from '../assignments/entities/assignment.entity.js';
@@ -17,6 +19,7 @@ import { CourseEnrollmentPolicy } from '../common/policies/course-enrollment.pol
 import { CourseOwnershipPolicy } from '../common/policies/course-ownership.policy.js';
 import { IdempotencyService } from '../common/idempotency/idempotency.service.js';
 import { IdempotencyKey } from '../common/idempotency/entities/idempotency-key.entity.js';
+import { User } from '../users/entities/user.entity.js';
 
 interface MongoError extends Error {
   code?: number;
@@ -33,11 +36,15 @@ interface SubmissionReaderContext {
   courseTutorId: string;
 }
 
+type SubmissionWithStudentName = SubmissionDocument & { studentName?: string };
+
 @Injectable()
 export class SubmissionsService {
   constructor(
     @InjectModel(Submission.name)
     private readonly submissionModel: Model<SubmissionDocument>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
     private readonly assignmentsService: AssignmentsService,
     private readonly courseEnrollmentPolicy: CourseEnrollmentPolicy,
     private readonly courseOwnershipPolicy: CourseOwnershipPolicy,
@@ -83,12 +90,17 @@ export class SubmissionsService {
     assignmentId: string,
     userId: string,
     role: Role,
-  ): Promise<SubmissionDocument[]> {
+  ): Promise<SubmissionWithStudentName[]> {
     const assignment = await this.assignmentsService.findOne(assignmentId);
     const readerContext = this.buildReaderContext(assignment);
     const filter = await this.buildFilterForReader(readerContext, userId, role);
 
-    return this.submissionModel.find(filter).sort({ createdAt: -1 }).exec();
+    const submissions = await this.submissionModel
+      .find(filter)
+      .sort({ createdAt: -1 })
+      .exec();
+
+    return this.attachStudentNames(submissions);
   }
 
   async addFeedback(
@@ -294,5 +306,30 @@ export class SubmissionsService {
       'submissionId'
     ];
     return typeof submissionId === 'string' ? submissionId : null;
+  }
+
+  private async attachStudentNames(
+    submissions: SubmissionDocument[],
+  ): Promise<SubmissionWithStudentName[]> {
+    if (submissions.length === 0) {
+      return submissions;
+    }
+
+    const studentIds = Array.from(
+      new Set(submissions.map((submission) => submission.studentId)),
+    );
+    const users = await this.userRepository.find({
+      select: { id: true, name: true },
+      where: { id: In(studentIds) },
+    });
+    const userNameById = new Map(
+      users.map((user) => [user.id, user.name] as const),
+    );
+
+    return submissions.map((submission) =>
+      Object.assign(submission, {
+        studentName: userNameById.get(submission.studentId),
+      }),
+    );
   }
 }

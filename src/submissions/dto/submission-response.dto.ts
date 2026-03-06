@@ -9,6 +9,9 @@ export class SubmissionResponseDto {
   @ApiProperty()
   studentId: string;
 
+  @ApiPropertyOptional()
+  studentName?: string;
+
   @ApiProperty()
   assignmentId: string;
 
@@ -38,8 +41,12 @@ export class SubmissionResponseDto {
 
   static from(doc: SubmissionDocument): SubmissionResponseDto {
     const dto = new SubmissionResponseDto();
+    const submissionWithStudentName = doc as SubmissionDocument & {
+      studentName?: string;
+    };
     dto.id = doc._id.toString();
     dto.studentId = doc.studentId;
+    dto.studentName = submissionWithStudentName.studentName;
     dto.assignmentId = doc.assignmentId;
     dto.content = doc.content;
     dto.fileUrls = doc.fileUrls;
