@@ -32,7 +32,7 @@ export IMAGE_TAG
 docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" pull app
 docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d postgres mongodb
 docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" run --rm app npm run migration:run:prod
-docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d app nginx
+docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d app
 
 MAX_RETRIES=30
 SLEEP_SECONDS=2
@@ -50,6 +50,8 @@ until docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" exec -T app \
   ATTEMPT=$((ATTEMPT + 1))
   sleep "$SLEEP_SECONDS"
 done
+
+docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d nginx
 
 if [[ -n "${API_DOMAIN:-}" ]] && [[ -f "$ROOT_DIR/infra/prod/certbot/conf/live/$API_DOMAIN/fullchain.pem" ]]; then
   PUBLIC_HEALTH_URL="https://localhost/api/v1/health"
