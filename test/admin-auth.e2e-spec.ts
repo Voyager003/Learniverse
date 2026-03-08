@@ -68,10 +68,10 @@ describe('Admin Auth (e2e)', () => {
       .send({ email, password: 'password123' })
       .expect(200);
 
-    const loginBody = expectSuccessEnvelope<{ accessToken: string; refreshToken: string }>(
-      loginRes,
-      200,
-    );
+    const loginBody = expectSuccessEnvelope<{
+      accessToken: string;
+      refreshToken: string;
+    }>(loginRes, 200);
     expect(loginBody.data.accessToken).toBeDefined();
     expect(loginBody.data.refreshToken).toBeDefined();
   });
