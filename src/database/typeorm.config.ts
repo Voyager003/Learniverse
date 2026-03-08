@@ -7,7 +7,7 @@ import { DataSource } from 'typeorm';
 // The TypeORM CLI runs outside Nest's ConfigModule, so it must load .env itself.
 loadEnv({ path: join(process.cwd(), '.env') });
 
-const runtimeRoot = existsSync(join(process.cwd(), 'dist')) ? 'dist' : 'src';
+const runtimeRoot = existsSync(join(process.cwd(), 'dist', 'src')) ? join('dist', 'src') : 'src';
 
 const AppDataSource = new DataSource({
   type: 'postgres',
