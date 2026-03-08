@@ -16,6 +16,8 @@ import { ERROR_MESSAGES } from '../common/constants/error-messages.constant.js';
 import { Role } from '../common/enums/index.js';
 import { User } from '../users/entities/user.entity.js';
 import { AdminAuditService } from '../admin/admin-audit.service.js';
+import { AdminRegisterDto } from '../admin/auth/dto/admin-register.dto.js';
+import { AdminRegisterResponseDto } from '../admin/auth/dto/admin-register-response.dto.js';
 
 @Injectable()
 export class AuthService {
@@ -43,6 +45,28 @@ export class AuthService {
     });
 
     return this.generateAndPersistTokens(user.id, user.email, user.role);
+  }
+
+  async registerAdmin(
+    dto: AdminRegisterDto,
+  ): Promise<AdminRegisterResponseDto> {
+    const existing = await this.usersService.findByEmail(dto.email);
+    if (existing) {
+      throw new ConflictException(ERROR_MESSAGES.EMAIL_ALREADY_EXISTS);
+    }
+
+    const passwordHash = await bcrypt.hash(dto.password, this.SALT_ROUNDS);
+    const user = await this.usersService.create({
+      email: dto.email,
+      passwordHash,
+      name: dto.name,
+      role: Role.ADMIN,
+    });
+
+    return {
+      email: user.email,
+      role: Role.ADMIN,
+    };
   }
 
   async login(dto: LoginDto): Promise<AuthResponseDto> {
