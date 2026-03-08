@@ -10,6 +10,21 @@ This project deploys with Docker Compose on a single Oracle Cloud VM.
 - TLS: Let's Encrypt (Certbot webroot)
 - Public entrypoint: `https://api.<your-domain>`
 
+Production runtime is split by role:
+
+- `nginx`: reverse proxy and TLS termination
+- `app`: NestJS API runtime
+- `postgres`: relational data store
+- `mongodb`: document data store
+- `certbot`: certificate issuance and renewal helper
+
+Network layout:
+
+- `edge`: `nginx`, `app`, `certbot`
+- `internal`: `app`, `postgres`, `mongodb`
+
+Only `80/443` are publicly exposed. `3000`, `5432`, and `27017` remain private.
+
 ## 2. Server Bootstrap
 
 Run on Oracle VM (Ubuntu):
@@ -29,6 +44,38 @@ sudo usermod -aG docker $USER
 
 Re-login after `usermod` so your user can run Docker without `sudo`.
 
+## 2-1. VM Hardening for 1GB Instances
+
+If you run this stack on a 1GB Oracle VM, add swap and configure Docker log rotation before the first production deploy.
+
+### Add 2GB swap
+
+```bash
+sudo fallocate -l 2G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+free -h
+```
+
+### Configure Docker log rotation
+
+```bash
+sudo mkdir -p /etc/docker
+cat <<'JSON' | sudo tee /etc/docker/daemon.json
+{
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "10m",
+    "max-file": "3"
+  }
+}
+JSON
+
+sudo systemctl restart docker
+```
+
 ## 3. Network and Firewall
 
 Allow only:
@@ -38,6 +85,16 @@ Allow only:
 - `443` (HTTPS)
 
 Do not open `3000`, `5432`, `27017` publicly.
+
+If you also use `ufw`, mirror the same policy:
+
+```bash
+sudo ufw allow 22/tcp
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw enable
+sudo ufw status
+```
 
 ## 4. Prepare Files and Environment
 
@@ -60,6 +117,12 @@ Set production values in `.env.prod`:
 - `JWT_SECRET`
 - `JWT_REFRESH_SECRET`
 - `DB_PASSWORD`
+
+Keep these host values as the Compose service names:
+
+- `DB_HOST=postgres`
+- `DB_PORT=5432`
+- `MONGODB_URI=mongodb://mongodb:27017/learniverse`
 
 ## 5. Issue First TLS Certificate
 
@@ -118,7 +181,8 @@ Deploy script behavior:
 
 - pulls new app image
 - runs DB services and migrations
-- starts app + nginx
+- starts `app` first and waits for app health
+- starts `nginx` after the app is healthy
 - checks app health and nginx proxy health
 
 ## 8. Automatic Certificate Renewal
@@ -159,3 +223,26 @@ After changing env values, redeploy frontend and verify:
 - token refresh
 - authenticated APIs (`/users/me`)
 - no CORS or Mixed Content errors in browser devtools
+
+## 11. Post-Deploy Verification
+
+Run these checks on the Oracle VM after each deployment:
+
+```bash
+cd /opt/learniverse
+docker compose -f infra/prod/docker-compose.prod.yml ps
+docker compose -f infra/prod/docker-compose.prod.yml logs --tail=100 app
+docker compose -f infra/prod/docker-compose.prod.yml logs --tail=100 nginx
+free -h
+docker stats --no-stream
+dmesg -T | grep -i -E "oom|killed process"
+curl -I https://api.<your-domain>/api/v1/health
+```
+
+Expected state:
+
+- `app`, `nginx`, `postgres`, `mongodb` are `Up`
+- `app` healthcheck passes
+- `nginx` can proxy to `app`
+- no unexpected OOM messages
+- only `80/443` are publicly reachable
