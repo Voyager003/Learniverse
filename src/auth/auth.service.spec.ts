@@ -138,6 +138,53 @@ describe('AuthService', () => {
     });
   });
 
+  describe('registerAdmin', () => {
+    it('관리자 사용자를 등록하고 토큰 없이 응답해야 한다', async () => {
+      usersService.findByEmail!.mockResolvedValue(null);
+      mockedHash.mockResolvedValue('hashed-pw');
+      usersService.create!.mockResolvedValue({
+        ...mockUser,
+        id: 'admin-uuid',
+        email: 'admin@example.com',
+        role: Role.ADMIN,
+      });
+
+      const result = await authService.registerAdmin({
+        email: 'admin@example.com',
+        password: 'password123',
+        name: 'Admin User',
+      });
+
+      expect(usersService.create).toHaveBeenCalledWith({
+        email: 'admin@example.com',
+        passwordHash: 'hashed-pw',
+        name: 'Admin User',
+        role: Role.ADMIN,
+      });
+      expect(result).toEqual({
+        email: 'admin@example.com',
+        role: Role.ADMIN,
+      });
+      expect(jwtService.signAsync).not.toHaveBeenCalled();
+      expect(usersService.updateRefreshToken).not.toHaveBeenCalled();
+    });
+
+    it('중복 이메일이면 ConflictException을 던져야 한다', async () => {
+      usersService.findByEmail!.mockResolvedValue({
+        ...mockUser,
+        email: 'admin@example.com',
+      });
+
+      await expect(
+        authService.registerAdmin({
+          email: 'admin@example.com',
+          password: 'password123',
+          name: 'Admin User',
+        }),
+      ).rejects.toThrow(ConflictException);
+    });
+  });
+
   describe('login', () => {
     it('유효한 자격 증명으로 토큰을 반환해야 한다', async () => {
       usersService.findByEmail!.mockResolvedValue(mockUser);

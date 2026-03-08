@@ -41,6 +41,40 @@ describe('Admin Auth (e2e)', () => {
     await teardownTestApp(ctx);
   });
 
+  it('공개 관리자 회원가입 후 관리자 로그인할 수 있다', async () => {
+    const email = `public-admin-${Date.now()}@test.com`;
+
+    const registerRes = await request(app.getHttpServer())
+      .post('/api/v1/admin/auth/register')
+      .send({
+        email,
+        password: 'password123',
+        name: 'Public Admin',
+      })
+      .expect(201);
+
+    const registerBody = expectSuccessEnvelope<{
+      email: string;
+      role: Role.ADMIN;
+    }>(registerRes, 201);
+    expect(registerBody.data).toEqual({
+      email,
+      role: Role.ADMIN,
+    });
+
+    const loginRes = await request(app.getHttpServer())
+      .post('/api/v1/admin/auth/login')
+      .send({ email, password: 'password123' })
+      .expect(200);
+
+    const loginBody = expectSuccessEnvelope<{ accessToken: string; refreshToken: string }>(
+      loginRes,
+      200,
+    );
+    expect(loginBody.data.accessToken).toBeDefined();
+    expect(loginBody.data.refreshToken).toBeDefined();
+  });
+
   it('관리자가 아닌 사용자는 관리자 로그인에 실패한다', async () => {
     const student = await createStudentAndLogin(app, {
       label: 'Admin Login Student',
@@ -95,7 +129,7 @@ describe('Admin Auth (e2e)', () => {
     expectErrorEnvelope(res, 401, ERROR_MESSAGES.UNAUTHORIZED);
   });
 
-  it('공개 회원가입으로 admin role을 만들 수 없다', async () => {
+  it('일반 공개 회원가입으로 admin role을 만들 수 없다', async () => {
     const res = await request(app.getHttpServer())
       .post('/api/v1/auth/register')
       .send({
