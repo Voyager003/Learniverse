@@ -8,6 +8,9 @@ export const ERROR_MESSAGES = {
 
   // Users
   USER_NOT_FOUND: 'User not found',
+  CANNOT_DEACTIVATE_SELF: 'Cannot deactivate your own account',
+  CANNOT_CHANGE_OWN_ROLE: 'Cannot change your own role',
+  LAST_ACTIVE_ADMIN_REQUIRED: 'At least one active admin must remain',
 
   // Courses
   COURSE_NOT_FOUND: 'Course not found',
