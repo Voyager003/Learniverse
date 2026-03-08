@@ -277,7 +277,17 @@ npm run test
 
 # 5) E2E 테스트 (Testcontainers 사용: Docker 필요)
 npm run test:e2e
+
+# 6) 핵심 스모크 E2E
+npm run test:e2e:smoke
 ```
+
+### E2E 범위
+
+- 기존 사용자 흐름: `auth`, `users`, `courses`, `assignments-submissions`
+- 백오피스 흐름: `admin-auth`, `admin-users`, `admin-content`, `admin-operations`
+
+`test:e2e:smoke`에는 권한 경계와 운영 핵심 플로우를 확인하는 `admin-auth`, `admin-users`가 포함됩니다.
 
 ## 로컬 API 문서
 - `http://localhost:3000/docs`

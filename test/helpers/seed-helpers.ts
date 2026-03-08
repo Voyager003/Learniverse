@@ -10,3 +10,13 @@ export async function promoteToTutor(
     email,
   ]);
 }
+
+export async function promoteToAdmin(
+  dataSource: DataSource,
+  email: string,
+): Promise<void> {
+  await dataSource.query(`UPDATE users SET role = $1 WHERE email = $2`, [
+    Role.ADMIN,
+    email,
+  ]);
+}
