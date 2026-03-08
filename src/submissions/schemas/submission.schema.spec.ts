@@ -10,6 +10,9 @@ describe('Submission 스키마', () => {
     expect(submission.feedback).toBeNull();
     expect(submission.score).toBeNull();
     expect(submission.reviewedAt).toBeNull();
+    expect(submission.isAdminHidden).toBe(false);
+    expect(submission.adminHiddenReason).toBeNull();
+    expect(submission.adminHiddenAt).toBeNull();
   });
 
   it('지정된 값으로 제출을 생성해야 한다', () => {

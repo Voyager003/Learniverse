@@ -216,7 +216,11 @@ describe('AssignmentsService', () => {
         'course-uuid',
       );
       expect(assignmentRepository.find).toHaveBeenCalledWith({
-        where: { courseId: 'course-uuid', isPublished: true },
+        where: {
+          courseId: 'course-uuid',
+          isPublished: true,
+          isAdminHidden: false,
+        },
         relations: ['course'],
         order: { createdAt: 'DESC' },
       });

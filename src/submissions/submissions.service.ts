@@ -28,6 +28,7 @@ interface MongoError extends Error {
 interface SubmissionFilter {
   assignmentId: string;
   studentId?: string;
+  isAdminHidden: { $ne: true };
 }
 
 interface SubmissionReaderContext {
@@ -139,7 +140,10 @@ export class SubmissionsService {
     userId: string,
     role: Role,
   ): Promise<SubmissionFilter> {
-    const filter: SubmissionFilter = { assignmentId: context.assignmentId };
+    const filter: SubmissionFilter = {
+      assignmentId: context.assignmentId,
+      isAdminHidden: { $ne: true },
+    };
 
     if (role === Role.TUTOR) {
       this.courseOwnershipPolicy.assertTutorOwnsCourse(
