@@ -11,6 +11,7 @@ import { CoursesModule } from './courses/courses.module.js';
 import { EnrollmentsModule } from './enrollments/enrollments.module.js';
 import { AssignmentsModule } from './assignments/assignments.module.js';
 import { SubmissionsModule } from './submissions/submissions.module.js';
+import { AdminModule } from './admin/admin.module.js';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard.js';
 import {
   appConfig,
@@ -35,6 +36,7 @@ import {
     EnrollmentsModule,
     AssignmentsModule,
     SubmissionsModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [

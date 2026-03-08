@@ -14,6 +14,7 @@ import { LoginDto } from './dto/login.dto.js';
 import { JwtPayload } from './interfaces/jwt-payload.interface.js';
 import { ERROR_MESSAGES } from '../common/constants/error-messages.constant.js';
 import { Role } from '../common/enums/index.js';
+import { User } from '../users/entities/user.entity.js';
 
 @Injectable()
 export class AuthService {
@@ -43,17 +44,14 @@ export class AuthService {
   }
 
   async login(dto: LoginDto): Promise<AuthResponseDto> {
-    const user = await this.usersService.findByEmail(dto.email);
-    if (!user) {
-      throw new UnauthorizedException(ERROR_MESSAGES.INVALID_CREDENTIALS);
-    }
+    const user = await this.validateCredentials(dto);
+    return this.generateAndPersistTokens(user.id, user.email, user.role);
+  }
 
-    const isPasswordValid = await bcrypt.compare(
-      dto.password,
-      user.passwordHash,
-    );
-    if (!isPasswordValid) {
-      throw new UnauthorizedException(ERROR_MESSAGES.INVALID_CREDENTIALS);
+  async loginAdmin(dto: LoginDto): Promise<AuthResponseDto> {
+    const user = await this.validateCredentials(dto);
+    if (user.role !== Role.ADMIN || !user.isActive) {
+      throw new UnauthorizedException(ERROR_MESSAGES.UNAUTHORIZED);
     }
 
     return this.generateAndPersistTokens(user.id, user.email, user.role);
@@ -83,6 +81,23 @@ export class AuthService {
 
   async logout(userId: string): Promise<void> {
     await this.usersService.updateRefreshToken(userId, null);
+  }
+
+  private async validateCredentials(dto: LoginDto): Promise<User> {
+    const user = await this.usersService.findByEmail(dto.email);
+    if (!user) {
+      throw new UnauthorizedException(ERROR_MESSAGES.INVALID_CREDENTIALS);
+    }
+
+    const isPasswordValid = await bcrypt.compare(
+      dto.password,
+      user.passwordHash,
+    );
+    if (!isPasswordValid) {
+      throw new UnauthorizedException(ERROR_MESSAGES.INVALID_CREDENTIALS);
+    }
+
+    return user;
   }
 
   private async generateTokens(

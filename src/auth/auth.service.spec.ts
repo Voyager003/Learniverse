@@ -174,6 +174,57 @@ describe('AuthService', () => {
     });
   });
 
+  describe('loginAdmin', () => {
+    it('활성 관리자 계정이면 토큰을 반환해야 한다', async () => {
+      const adminUser = {
+        ...mockUser,
+        role: Role.ADMIN,
+      };
+      usersService.findByEmail!.mockResolvedValue(adminUser);
+      mockedCompare.mockResolvedValue(true);
+      jwtService.signAsync!.mockResolvedValueOnce('admin-access-token');
+      jwtService.signAsync!.mockResolvedValueOnce('admin-refresh-token');
+      mockedHash.mockResolvedValue('hashed-refresh');
+      usersService.updateRefreshToken!.mockResolvedValue(undefined);
+
+      const result = await authService.loginAdmin({
+        email: 'admin@example.com',
+        password: 'password123',
+      });
+
+      expect(result.accessToken).toBe('admin-access-token');
+      expect(result.refreshToken).toBe('admin-refresh-token');
+    });
+
+    it('관리자 역할이 아니면 UnauthorizedException을 던져야 한다', async () => {
+      usersService.findByEmail!.mockResolvedValue(mockUser);
+      mockedCompare.mockResolvedValue(true);
+
+      await expect(
+        authService.loginAdmin({
+          email: 'test@example.com',
+          password: 'password123',
+        }),
+      ).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('비활성 관리자면 UnauthorizedException을 던져야 한다', async () => {
+      usersService.findByEmail!.mockResolvedValue({
+        ...mockUser,
+        role: Role.ADMIN,
+        isActive: false,
+      });
+      mockedCompare.mockResolvedValue(true);
+
+      await expect(
+        authService.loginAdmin({
+          email: 'admin@example.com',
+          password: 'password123',
+        }),
+      ).rejects.toThrow(UnauthorizedException);
+    });
+  });
+
   describe('refresh', () => {
     it('유효한 리프레시 토큰으로 새 토큰을 반환해야 한다', async () => {
       const userWithToken = {
