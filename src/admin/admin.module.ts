@@ -4,6 +4,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from '../auth/auth.module.js';
 import { Assignment } from '../assignments/entities/assignment.entity.js';
 import { Course } from '../courses/entities/course.entity.js';
+import { IdempotencyKey } from '../common/idempotency/entities/idempotency-key.entity.js';
+import { Enrollment } from '../enrollments/entities/enrollment.entity.js';
 import {
   Submission,
   SubmissionSchema,
@@ -16,12 +18,20 @@ import { AdminAuditController } from './admin-audit.controller.js';
 import { AdminAuditModule } from './admin-audit.module.js';
 import { AdminContentController } from './admin-content.controller.js';
 import { AdminContentService } from './admin-content.service.js';
+import { AdminOperationsController } from './admin-operations.controller.js';
+import { AdminOperationsService } from './admin-operations.service.js';
 import { AdminUsersController } from './admin-users.controller.js';
 import { AdminUsersService } from './admin-users.service.js';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Course, Assignment]),
+    TypeOrmModule.forFeature([
+      User,
+      Course,
+      Assignment,
+      Enrollment,
+      IdempotencyKey,
+    ]),
     MongooseModule.forFeature([
       { name: Submission.name, schema: SubmissionSchema },
     ]),
@@ -34,8 +44,14 @@ import { AdminUsersService } from './admin-users.service.js';
     AdminAuditController,
     AdminUsersController,
     AdminContentController,
+    AdminOperationsController,
   ],
-  providers: [AdminBootstrapService, AdminUsersService, AdminContentService],
+  providers: [
+    AdminBootstrapService,
+    AdminUsersService,
+    AdminContentService,
+    AdminOperationsService,
+  ],
   exports: [AdminBootstrapService],
 })
 export class AdminModule {}
