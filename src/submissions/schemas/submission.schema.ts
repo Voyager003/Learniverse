@@ -34,6 +34,15 @@ export class Submission {
   @Prop({ type: Date, default: null })
   reviewedAt: Date | null = null;
 
+  @Prop({ type: Boolean, default: false })
+  isAdminHidden: boolean = false;
+
+  @Prop({ type: String, default: null })
+  adminHiddenReason: string | null = null;
+
+  @Prop({ type: Date, default: null })
+  adminHiddenAt: Date | null = null;
+
   // timestamps: true generates these at runtime
   createdAt: Date;
   updatedAt: Date;

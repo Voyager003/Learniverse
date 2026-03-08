@@ -10,6 +10,7 @@
 - 동시 요청 상황에서 데이터 정합성 보장
 - 재시도 요청(네트워크 불안정, 더블 클릭)에서도 멱등 처리
 - VM 단일 환경에서도 운영 가능한 배포 자동화(CI/CD + 컨테이너)
+- 관리자용 백오피스 API surface
 
 ### 배포 URL
 - Frontend (Vercel): `https://learniverse-client-alpha.vercel.app/`
@@ -42,7 +43,7 @@
 ### 핵심 기능 목록
 - 인증/인가
   - 회원가입, 로그인, 토큰 재발급, 로그아웃
-  - 역할 기반 권한(`student`, `tutor`)
+  - 역할 기반 권한(`student`, `tutor`, `admin`)
 - 강의/레슨
   - 튜터의 강의 생성/수정/삭제
   - 레슨(강의 하위 리소스) 관리
@@ -58,6 +59,12 @@
   - `Idempotency-Key` 기반 중복 요청 방지
   - 진행률 업데이트 시 비관적 락 적용
   - 글로벌 예외 필터/응답 인터셉터/요청 로깅
+- 백오피스 기능
+  - 관리자 인증 경계
+  - 감사 로그
+  - 사용자 운영 API
+  - 콘텐츠 moderation API
+  - 운영 조회 API
 
 ## 시스템 아키텍처
 
@@ -111,12 +118,31 @@
 
 ## ⑥ ERD
 
+### 이번 백오피스 피처로 반영된 스키마 변경
+
+- PostgreSQL
+  - `admin_audit_logs` 테이블 추가
+  - `courses`에 moderation 컬럼 추가
+    - `is_admin_hidden`
+    - `admin_hidden_reason`
+    - `admin_hidden_at`
+  - `assignments`에 moderation 컬럼 추가
+    - `is_admin_hidden`
+    - `admin_hidden_reason`
+    - `admin_hidden_at`
+- MongoDB
+  - `submissions` 문서에 moderation 필드 추가
+    - `isAdminHidden`
+    - `adminHiddenReason`
+    - `adminHiddenAt`
+
 ### 관계형 DB (PostgreSQL)
 
 ```mermaid
 erDiagram
     USERS ||--o{ COURSES : owns
     USERS ||--o{ ENROLLMENTS : enrolls
+    USERS ||--o{ ADMIN_AUDIT_LOGS : writes
     COURSES ||--o{ LECTURES : has
     COURSES ||--o{ ENROLLMENTS : has
     COURSES ||--o{ ASSIGNMENTS : has
@@ -140,6 +166,9 @@ erDiagram
       varchar category
       varchar difficulty
       boolean is_published
+      boolean is_admin_hidden
+      text admin_hidden_reason
+      datetime admin_hidden_at
       uuid tutor_id FK
       datetime created_at
       datetime updated_at
@@ -173,8 +202,23 @@ erDiagram
       uuid course_id FK
       datetime due_date
       boolean is_published
+      boolean is_admin_hidden
+      text admin_hidden_reason
+      datetime admin_hidden_at
       datetime created_at
       datetime updated_at
+    }
+
+    ADMIN_AUDIT_LOGS {
+      uuid id PK
+      uuid actor_id FK
+      varchar action
+      varchar resource_type
+      varchar resource_id
+      jsonb before_state
+      jsonb after_state
+      jsonb metadata
+      datetime created_at
     }
 
     IDEMPOTENCY_KEYS {
@@ -207,6 +251,9 @@ erDiagram
       string feedback
       number score
       datetime reviewedAt
+      boolean isAdminHidden
+      string adminHiddenReason
+      datetime adminHiddenAt
       datetime createdAt
       datetime updatedAt
     }
@@ -221,6 +268,8 @@ erDiagram
   - `assignments(course_id)` index
   - `idempotency_keys(user_id, method, path, idempotency_key)` unique
   - `idempotency_keys(expires_at)` index
+  - `admin_audit_logs(actor_id)` index
+  - `admin_audit_logs(created_at)` index
 - MongoDB
   - `submissions(studentId, assignmentId)` unique
   - `submissions(assignmentId)` index
@@ -277,7 +326,17 @@ npm run test
 
 # 5) E2E 테스트 (Testcontainers 사용: Docker 필요)
 npm run test:e2e
+
+# 6) 핵심 스모크 E2E
+npm run test:e2e:smoke
 ```
+
+### E2E 범위
+
+- 기존 사용자 흐름: `auth`, `users`, `courses`, `assignments-submissions`
+- 백오피스 흐름: `admin-auth`, `admin-users`, `admin-content`, `admin-operations`
+
+`test:e2e:smoke`에는 권한 경계와 운영 핵심 플로우를 확인하는 `admin-auth`, `admin-users`가 포함됩니다.
 
 ## 로컬 API 문서
 - `http://localhost:3000/docs`

@@ -70,6 +70,20 @@ export async function assertRefreshTokenStateByEmail(
   expect(rows[0].refresh_token).toBeNull();
 }
 
+export async function assertUserActiveStateByEmail(
+  dataSource: DataSource,
+  email: string,
+  expectedActive: boolean,
+): Promise<void> {
+  const rows: Array<{ is_active: boolean }> = await dataSource.query(
+    'SELECT is_active FROM users WHERE email = $1',
+    [email],
+  );
+
+  expect(rows).toHaveLength(1);
+  expect(rows[0].is_active).toBe(expectedActive);
+}
+
 export async function assertCoursePublishedState(
   dataSource: DataSource,
   courseId: string,
@@ -82,6 +96,34 @@ export async function assertCoursePublishedState(
 
   expect(rows).toHaveLength(1);
   expect(rows[0].is_published).toBe(expectedPublished);
+}
+
+export async function assertCourseModerationState(
+  dataSource: DataSource,
+  courseId: string,
+  expectedHidden: boolean,
+): Promise<void> {
+  const rows: Array<{ is_admin_hidden: boolean }> = await dataSource.query(
+    'SELECT is_admin_hidden FROM courses WHERE id = $1',
+    [courseId],
+  );
+
+  expect(rows).toHaveLength(1);
+  expect(rows[0].is_admin_hidden).toBe(expectedHidden);
+}
+
+export async function assertAssignmentModerationState(
+  dataSource: DataSource,
+  assignmentId: string,
+  expectedHidden: boolean,
+): Promise<void> {
+  const rows: Array<{ is_admin_hidden: boolean }> = await dataSource.query(
+    'SELECT is_admin_hidden FROM assignments WHERE id = $1',
+    [assignmentId],
+  );
+
+  expect(rows).toHaveLength(1);
+  expect(rows[0].is_admin_hidden).toBe(expectedHidden);
 }
 
 export async function assertEnrollmentState(
@@ -180,4 +222,55 @@ export async function assertSubmissionState(
   if (expected.reviewedAt === 'not-null') {
     expect(submission.reviewedAt).not.toBeNull();
   }
+}
+
+export async function assertSubmissionModerationState(
+  mongoConnection: Connection,
+  submissionId: string,
+  expectedHidden: boolean,
+): Promise<void> {
+  const submission = (await mongoConnection.collection('submissions').findOne({
+    _id: new mongoConnection.base.Types.ObjectId(submissionId),
+  })) as Record<string, unknown> | null;
+
+  expect(submission).not.toBeNull();
+  if (!submission) {
+    return;
+  }
+
+  expect(submission.isAdminHidden).toBe(expectedHidden);
+}
+
+export async function assertAdminAuditLogExists(
+  dataSource: DataSource,
+  action: string,
+  resourceType: string,
+  resourceId?: string,
+): Promise<void> {
+  const rows: Array<{ count: number }> = await dataSource.query(
+    `SELECT COUNT(*)::int AS count
+     FROM admin_audit_logs
+     WHERE action = $1
+       AND resource_type = $2
+       AND ($3::varchar IS NULL OR resource_id = $3)`,
+    [action, resourceType, resourceId ?? null],
+  );
+
+  expect(rows).toHaveLength(1);
+  expect(rows[0].count).toBeGreaterThan(0);
+}
+
+export async function assertIdempotencyKeyCount(
+  dataSource: DataSource,
+  userId: string,
+  path: string,
+  expectedCount: number,
+): Promise<void> {
+  const rows: Array<{ count: number }> = await dataSource.query(
+    'SELECT COUNT(*)::int AS count FROM idempotency_keys WHERE user_id = $1 AND path = $2',
+    [userId, path],
+  );
+
+  expect(rows).toHaveLength(1);
+  expect(rows[0].count).toBe(expectedCount);
 }

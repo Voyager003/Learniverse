@@ -207,7 +207,35 @@ describe('SubmissionsService', () => {
         studentId: 'student-uuid',
         studentName: '홍길동',
       });
+      expect(submissionModel.find).toHaveBeenCalledWith({
+        assignmentId: 'assignment-uuid',
+        isAdminHidden: { $ne: true },
+      });
       expect(userRepository.find).toHaveBeenCalledTimes(1);
+    });
+
+    it('학생 조회 시 관리자 숨김 제출물을 제외하고 본인 제출만 조회해야 한다', async () => {
+      assignmentsService.findOne!.mockResolvedValue(mockAssignment);
+      courseEnrollmentPolicy.assertStudentEnrolled!.mockResolvedValue(
+        undefined,
+      );
+      submissionModel.find.mockReturnValue({
+        sort: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue([]),
+      });
+      userRepository.find.mockResolvedValue([]);
+
+      await service.findByAssignment(
+        'assignment-uuid',
+        'student-uuid',
+        Role.STUDENT,
+      );
+
+      expect(submissionModel.find).toHaveBeenCalledWith({
+        assignmentId: 'assignment-uuid',
+        studentId: 'student-uuid',
+        isAdminHidden: { $ne: true },
+      });
     });
   });
 

@@ -1,7 +1,11 @@
 import 'reflect-metadata';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { config as loadEnv } from 'dotenv';
 import { DataSource } from 'typeorm';
+
+// The TypeORM CLI runs outside Nest's ConfigModule, so it must load .env itself.
+loadEnv({ path: join(process.cwd(), '.env') });
 
 const runtimeRoot = existsSync(join(process.cwd(), 'dist')) ? 'dist' : 'src';
 

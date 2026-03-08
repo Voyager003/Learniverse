@@ -66,7 +66,7 @@ export class CoursesService {
 
   async findById(id: string): Promise<Course> {
     const course = await this.courseRepository.findOne({
-      where: { id, isPublished: true },
+      where: { id, isPublished: true, isAdminHidden: false },
       relations: ['tutor', 'lectures'],
     });
 
@@ -185,6 +185,9 @@ export class CoursesService {
   private applyPublishedFilter(qb: SelectQueryBuilder<Course>): void {
     // Public endpoint: only show published courses
     qb.where('course.isPublished = :isPublished', { isPublished: true });
+    qb.andWhere('course.isAdminHidden = :isAdminHidden', {
+      isAdminHidden: false,
+    });
   }
 
   private applyOptionalFilters(

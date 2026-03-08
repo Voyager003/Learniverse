@@ -44,7 +44,9 @@ export class AssignmentsService {
     const course = await this.findCourseOrFail(courseId);
     await this.authorizeCourseReader(course, userId, role);
     const where =
-      role === Role.STUDENT ? { courseId, isPublished: true } : { courseId };
+      role === Role.STUDENT
+        ? { courseId, isPublished: true, isAdminHidden: false }
+        : { courseId };
 
     return this.assignmentRepository.find({
       where,

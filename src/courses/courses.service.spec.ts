@@ -152,6 +152,17 @@ describe('CoursesService', () => {
       );
     });
 
+    it('관리자 숨김 강좌는 공개 목록에서 제외해야 한다', async () => {
+      mockQueryBuilder.getManyAndCount!.mockResolvedValue([[], 0]);
+
+      await service.findAll({ page: 1, limit: 10 });
+
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'course.isAdminHidden = :isAdminHidden',
+        { isAdminHidden: false },
+      );
+    });
+
     it('category 필터를 적용해야 한다', async () => {
       mockQueryBuilder.getManyAndCount!.mockResolvedValue([[], 0]);
 
@@ -289,7 +300,11 @@ describe('CoursesService', () => {
 
       expect(result).toEqual(course);
       expect(courseRepository.findOne).toHaveBeenCalledWith({
-        where: { id: 'course-uuid', isPublished: true },
+        where: {
+          id: 'course-uuid',
+          isPublished: true,
+          isAdminHidden: false,
+        },
         relations: ['tutor', 'lectures'],
       });
     });
