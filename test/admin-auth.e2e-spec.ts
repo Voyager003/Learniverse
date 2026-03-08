@@ -3,6 +3,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { DataSource } from 'typeorm';
 import { ERROR_MESSAGES } from '../src/common/constants/error-messages.constant';
+import { Role } from '../src/common/enums';
 import {
   createTestApp,
   teardownTestApp,
