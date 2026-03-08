@@ -7,6 +7,7 @@ import { UsersService } from '../users/users.service.js';
 import { User } from '../users/entities/user.entity.js';
 import { Role } from '../common/enums/index.js';
 import * as bcrypt from 'bcrypt';
+import { AdminAuditService } from '../admin/admin-audit.service.js';
 
 jest.mock('bcrypt');
 
@@ -30,6 +31,7 @@ describe('AuthService', () => {
   let usersService: Partial<Record<keyof UsersService, jest.Mock>>;
   let jwtService: Partial<Record<keyof JwtService, jest.Mock>>;
   let configService: Partial<Record<keyof ConfigService, jest.Mock>>;
+  let adminAuditService: Partial<Record<keyof AdminAuditService, jest.Mock>>;
 
   beforeEach(async () => {
     usersService = {
@@ -41,6 +43,9 @@ describe('AuthService', () => {
 
     jwtService = {
       signAsync: jest.fn(),
+    };
+    adminAuditService = {
+      record: jest.fn(),
     };
 
     configService = {
@@ -61,6 +66,7 @@ describe('AuthService', () => {
         { provide: UsersService, useValue: usersService },
         { provide: JwtService, useValue: jwtService },
         { provide: ConfigService, useValue: configService },
+        { provide: AdminAuditService, useValue: adminAuditService },
       ],
     }).compile();
 
@@ -186,6 +192,7 @@ describe('AuthService', () => {
       jwtService.signAsync!.mockResolvedValueOnce('admin-refresh-token');
       mockedHash.mockResolvedValue('hashed-refresh');
       usersService.updateRefreshToken!.mockResolvedValue(undefined);
+      adminAuditService.record!.mockResolvedValue(undefined);
 
       const result = await authService.loginAdmin({
         email: 'admin@example.com',
@@ -194,6 +201,14 @@ describe('AuthService', () => {
 
       expect(result.accessToken).toBe('admin-access-token');
       expect(result.refreshToken).toBe('admin-refresh-token');
+      expect(adminAuditService.record).toHaveBeenCalledWith({
+        actorId: 'uuid-1',
+        action: 'admin.login',
+        resourceType: 'auth',
+        resourceId: 'uuid-1',
+        afterState: { role: Role.ADMIN },
+        metadata: { email: 'test@example.com' },
+      });
     });
 
     it('관리자 역할이 아니면 UnauthorizedException을 던져야 한다', async () => {

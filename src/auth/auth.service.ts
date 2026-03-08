@@ -15,6 +15,7 @@ import { JwtPayload } from './interfaces/jwt-payload.interface.js';
 import { ERROR_MESSAGES } from '../common/constants/error-messages.constant.js';
 import { Role } from '../common/enums/index.js';
 import { User } from '../users/entities/user.entity.js';
+import { AdminAuditService } from '../admin/admin-audit.service.js';
 
 @Injectable()
 export class AuthService {
@@ -24,6 +25,7 @@ export class AuthService {
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly adminAuditService: AdminAuditService,
   ) {}
 
   async register(dto: RegisterDto): Promise<AuthResponseDto> {
@@ -54,7 +56,20 @@ export class AuthService {
       throw new UnauthorizedException(ERROR_MESSAGES.UNAUTHORIZED);
     }
 
-    return this.generateAndPersistTokens(user.id, user.email, user.role);
+    const tokens = await this.generateAndPersistTokens(
+      user.id,
+      user.email,
+      user.role,
+    );
+    await this.adminAuditService.record({
+      actorId: user.id,
+      action: 'admin.login',
+      resourceType: 'auth',
+      resourceId: user.id,
+      afterState: { role: Role.ADMIN },
+      metadata: { email: user.email },
+    });
+    return tokens;
   }
 
   async refresh(
